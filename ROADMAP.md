@@ -165,10 +165,12 @@ Il grosso del lavoro prima di mettere il link nel CV.
       ingegneristico, non solo capacità di scrivere codice
 - [ ] GIF o breve video demo nel README
 - [x] **Keep-alive** — FATTO (2026-09-02). `GET /api/health` (count sul DB,
-      ritorna `{status, chunks, dbLatencyMs}`) + `.github/workflows/
-      keep-alive.yml` che lo pinga ogni ~10 min + il frontend chiama
-      `/api/health` a fine cold-start per svegliare Neon prima della prima
-      domanda. Verificato in prod.
+      ritorna `{status, chunks, dbLatencyMs}`) + il frontend lo chiama a fine
+      cold-start per svegliare Neon prima della prima domanda.
+      Ping periodico: **UptimeRobot** (monitor HTTP ogni 5 min, primario) +
+      `.github/workflows/keep-alive.yml` (backup, ogni ~10 min; il cron di
+      GitHub slitta troppo per farci affidamento da solo). Il cold start di
+      Render è ~80s → il workflow ora aspetta fino a 180s per ping.
 - [ ] **Pannello "Analytics" in-app (modalità sviluppatore)** — sezione nel
       sito, visibile solo con dev mode attiva, che legge
       `GET /api/admin/feedback` e mostra media stelle, distribuzione e

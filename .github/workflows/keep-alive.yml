@@ -5,6 +5,10 @@ name: keep-alive
 # /api/health (che tocca il DB) evita che un recruiter che apre il link
 # aspetti 15-50s di cold start.
 #
+# Keep-alive PRIMARIO: UptimeRobot (monitor HTTP su /api/health, ogni 5 min) —
+# più affidabile perché il cron di GitHub Actions slitta spesso. Questo
+# workflow è il BACKUP.
+#
 # NB: se cambia l'URL del servizio Render, aggiornarlo qui sotto.
 # NB: le GitHub Actions schedulate vengono disattivate dopo 60 giorni senza
 #     attività sul repo — basta un commit o un avvio manuale per riattivarle.

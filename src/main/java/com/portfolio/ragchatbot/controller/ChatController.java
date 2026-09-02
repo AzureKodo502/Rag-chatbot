@@ -111,13 +111,7 @@ public class ChatController {
             return existing;
         }
         String newSessionId = UUID.randomUUID().toString();
-        // SameSite=None; Secure: vedi nota in AdminController. Il frontend è cross-site
-        // rispetto al backend, quindi con SameSite=Lax questo cookie non tornerebbe mai
-        // indietro e il layer di rate limiting per sessione sarebbe di fatto disattivato
-        // (resterebbe solo quello per IP).
-        String cookieHeader = SESSION_COOKIE_NAME + "=" + newSessionId
-                + "; Path=/; Max-Age=2592000; HttpOnly; SameSite=None; Secure";
-        response.addHeader("Set-Cookie", cookieHeader);
+        HttpRequests.setAppCookie(response, SESSION_COOKIE_NAME, newSessionId, 30 * 24 * 60 * 60); // 30 giorni
         return newSessionId;
     }
 

@@ -1,34 +1,63 @@
 package com.portfolio.ragchatbot.controller;
 
+import com.portfolio.ragchatbot.service.AdminSessionService;
 import com.portfolio.ragchatbot.service.IngestionService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Endpoint di comodo per popolare la knowledge base in locale.
- * IMPORTANTE: prima del deploy pubblico, proteggi questo controller
- * (es. con una chiave admin) o rimuovilo del tutto e fai l'ingestion
- * solo in locale/CI.
+ * Endpoint per popolare la knowledge base.
+ *
+ * Protetto dal token "modalità sviluppatore" (cookie {@code rag_admin_token}):
+ * l'ingestion e il wipe non devono essere pubblici una volta online. In
+ * locale si attiva la dev mode dal frontend, poi si chiamano questi endpoint
+ * con lo stesso cookie.
  */
 @RestController
 @RequestMapping("/api/admin/ingest")
 public class IngestionController {
 
     private final IngestionService ingestionService;
+    private final AdminSessionService adminSessionService;
 
-    public IngestionController(IngestionService ingestionService) {
+    public IngestionController(IngestionService ingestionService, AdminSessionService adminSessionService) {
         this.ingestionService = ingestionService;
+        this.adminSessionService = adminSessionService;
     }
 
     @PostMapping
-    public String ingest(@RequestBody IngestRequest request) {
+    public ResponseEntity<?> ingest(@RequestBody IngestRequest request, HttpServletRequest httpRequest) {
+        if (!isAdmin(httpRequest)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Non autorizzato.");
+        }
         int chunks = ingestionService.ingest(request.source(), request.text());
-        return "Salvati " + chunks + " chunk per la sorgente '" + request.source() + "'";
+        return ResponseEntity.ok("Salvati " + chunks + " chunk per la sorgente '" + request.source() + "'");
     }
 
     @DeleteMapping
-    public String reset() {
+    public ResponseEntity<?> reset(HttpServletRequest httpRequest) {
+        if (!isAdmin(httpRequest)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Non autorizzato.");
+        }
         ingestionService.resetKnowledgeBase();
-        return "Knowledge base svuotata";
+        return ResponseEntity.ok("Knowledge base svuotata");
+    }
+
+    private boolean isAdmin(HttpServletRequest request) {
+        return adminSessionService.isValidToken(readCookie(request, AdminController.ADMIN_COOKIE_NAME));
+    }
+
+    private String readCookie(HttpServletRequest request, String name) {
+        if (request.getCookies() == null) return null;
+        for (Cookie cookie : request.getCookies()) {
+            if (name.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 
     public record IngestRequest(String source, String text) {

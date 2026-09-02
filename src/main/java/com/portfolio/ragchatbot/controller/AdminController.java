@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/admin/login")
-@CrossOrigin(originPatterns = "*", allowCredentials = "true")
 public class AdminController {
 
     public static final String ADMIN_COOKIE_NAME = "rag_admin_token";

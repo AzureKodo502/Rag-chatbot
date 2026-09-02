@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@CrossOrigin(originPatterns = "*", allowCredentials = "true")
 public class FeedbackController {
 
     private final FeedbackService feedbackService;

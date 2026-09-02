@@ -510,7 +510,67 @@ browser vero (feedback + riassunto).
   un'altra persona, senza toccare `.java`. Multi-tenant SaaS = ipotesi
   lontana citata nella roadmap, esplicitamente non pianificata.
 
-**Prossimo passo concreto:** Fase 4 (deploy).
+## Fase 4 — Deploy: preparazione codice FATTA (2026-09-02)
+
+Stack scelto: **Neon** (DB) + **Render** (backend, free) + frontend servito
+da Spring + **Dockerfile**. Repo Git inizializzato (`main`, primo commit
+`2f943c5` baseline + un commit con le modifiche deploy).
+
+### Modifiche fatte (verificate: `mvn package` online OK + smoke test del jar
+su porta 8090 contro il Postgres locale)
+
+- **Frontend spostato**: `frontend/index.html` → `src/main/resources/static/
+  index.html`. Spring lo serve su `/`. `API_BASE` da `http://localhost:8080`
+  → `""` (relativo, stessa origine). La cartella `frontend/` non esiste più.
+- **`Dockerfile`** multi-stage (maven:3.9-temurin-21 → temurin-21-jre),
+  `-XX:MaxRAMPercentage=75` per i 512 MB di Render. `.dockerignore`.
+- **CORS**: rimosso `@CrossOrigin` da tutti i controller; nuova
+  `config/WebConfig.java` (`WebMvcConfigurer`) che abilita CORS su `/api/**`
+  SOLO se `app.cors.allowed-origins` (env `CORS_ALLOWED_ORIGINS`) è
+  valorizzato. Default vuoto = stessa origine, nessun header CORS.
+  Verificato: preflight da origine estranea → 403.
+- **`/api/admin/ingest` protetto**: `IngestionController` ora controlla il
+  cookie `rag_admin_token` (come Feedback/Summary). POST e DELETE → 401
+  senza dev mode. **Lo script `reingest.sh` ora fa login prima** (accetta
+  `BASE` e `ADMIN_PW` per puntare a produzione).
+- **`application.yml`**: `server.port: ${PORT:8080}`;
+  `spring.datasource.url` con `?sslmode=${DB_SSLMODE:disable}` (Neon =
+  `require`); `hikari.maximum-pool-size: ${DB_POOL_SIZE:5}` (Neon free ha
+  poche connessioni); sezione `app.cors.allowed-origins`.
+- **`.gitattributes`** (`eol=lf`), **`.claude/launch.json`** → config
+  "attach" a `http://localhost:8080` (il frontend-static non serve più).
+- README: sezione Deploy riscritta con i passi Neon/Render + tabella env var.
+
+### DA FARE (richiede account dell'utente — non fattibile da qui)
+
+1. Repo su GitHub (privato per ora), `git remote add origin` + push
+2. Neon: progetto → `CREATE EXTENSION vector` → applica `V1` + `V2` →
+   copiare host/db/user/password
+3. Render: Web Service da Docker, env var (vedi tabella nel README), Secret
+   File `summary.json` + `SUMMARY_STATIC_FILE=/etc/secrets/summary.json`
+4. Dopo il 1° deploy: `BASE=https://... ADMIN_PW=... bash reingest.sh`
+5. Test da un altro dispositivo
+
+### Env var necessarie su Render
+
+`ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, `ADMIN_BYPASS_PASSWORD`, `DB_HOST`,
+`DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSLMODE=require`,
+`SUMMARY_STATIC_FILE=/etc/secrets/summary.json`. (`PORT` la mette Render.)
+
+### Note / follow-up non bloccanti
+
+- I cookie `rag_admin_token` e `rag_session_id` sono ancora
+  `SameSite=None; Secure`. Con frontend same-origin `SameSite=Lax` sarebbe
+  più corretto — cambio piccolo, da fare in Fase 6 (serve ri-verificare la
+  dev mode).
+- `readCookie` duplicato in 3 controller (Feedback, Summary, Ingestion) —
+  estrarre in un helper quando si tocca quella zona (Fase 7 pulizia).
+- Build locale: `mvn package` offline fallisce (surefire non in cache);
+  usare online, oppure `mvn compile` per il check veloce. Il Docker build
+  gira online e fa il `package` completo.
+
+**Prossimo passo concreto:** l'utente crea repo GitHub + account Neon +
+Render, poi push e deploy.
 
 **Come ripartire:** basta leggere questo file + `ROADMAP.md` + il codice.
 Niente da ricordare a memoria oltre a questo. Le note persistenti stanno

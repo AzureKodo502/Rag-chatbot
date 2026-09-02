@@ -1,14 +1,25 @@
 server:
-  port: 8080
+  # In locale 8080; su Render la porta arriva da $PORT
+  port: ${PORT:8080}
   error:
     include-message: always
     include-binding-errors: always
 
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ragchatbot}
+    # DB_SSLMODE: "disable" in locale, "require" su Postgres gestiti (Neon/Supabase)
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ragchatbot}?sslmode=${DB_SSLMODE:disable}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
+    hikari:
+      # Neon free tier ha un limite basso di connessioni: teniamo il pool piccolo
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+
+app:
+  cors:
+    # Vuoto = solo stessa origine (produzione, frontend servito da Spring).
+    # Per un frontend su un'altra origine: CORS_ALLOWED_ORIGINS=http://127.0.0.1:8000
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
 
 # Chiavi/API esterne: NON committare mai le vere chiavi.
 # In produzione (Render/Railway) impostale come variabili d'ambiente.

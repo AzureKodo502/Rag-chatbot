@@ -18,9 +18,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/chat")
-@CrossOrigin(originPatterns = "*", allowCredentials = "true",
-        exposedHeaders = {"X-RateLimit-Remaining-Minute", "X-RateLimit-Remaining-Day",
-                "X-RateLimit-Reset-Minute", "X-RateLimit-Reset-Day", "X-Admin-Bypass"})
 public class ChatController {
 
     private static final String SESSION_COOKIE_NAME = "rag_session_id";

@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
  * riavvio del backend, poi solo cache.
  */
 @RestController
-@CrossOrigin(originPatterns = "*", allowCredentials = "true")
 public class SummaryController {
 
     private final SummaryService summaryService;

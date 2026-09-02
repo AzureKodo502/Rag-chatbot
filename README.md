@@ -33,8 +33,11 @@ rag-portfolio-chatbot/
 ├── src/main/resources/
 │   ├── application.yml
 │   ├── db/migration/V1__init.sql     -> schema + estensione pgvector
-│   └── knowledge-base/cv-sample.txt  -> SOSTITUISCI con i tuoi contenuti
-└── frontend/index.html               -> pagina chat standalone
+│   ├── db/migration/V2__feedback.sql -> tabella feedback
+│   ├── knowledge-base/cv-sample.txt  -> SOSTITUISCI con i tuoi contenuti
+│   └── static/index.html             -> pagina chat, servita da Spring su /
+├── Dockerfile                        -> build multi-stage per il deploy
+└── summary.json                      -> sezioni statiche "Genera Riassunto" (gitignorato)
 ```
 
 ## Setup locale
@@ -87,9 +90,13 @@ Senza questo file, `POST /api/summary` risponde 502.
 
 ### 3. Avvio
 
+Da IntelliJ (run di `RagChatbotApplication`) o da terminale con Maven:
+
 ```bash
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
+
+Il frontend è servito dallo stesso backend: apri **http://localhost:8080**.
 
 ### 4. Popolare la knowledge base
 
@@ -108,30 +115,67 @@ di presentazione, descrizione di questo stesso progetto).
 
 ### 5. Provare il frontend
 
-Apri `frontend/index.html` direttamente nel browser (o servilo con un
-qualsiasi static server) mentre il backend gira su `localhost:8080`.
+Apri **http://localhost:8080** — il frontend è una risorsa statica servita
+da Spring, stessa origine delle API.
 
-## Deploy (per avere un link da mettere nel CV)
+## Deploy
 
-- **Backend**: Render o Railway, entrambi hanno free tier compatibili con
-  Spring Boot (Docker o build automatico da `pom.xml`)
-- **Database**: Neon o Supabase, entrambi Postgres gestito con `pgvector`
-  già disponibile come estensione abilitabile
-- **Frontend**: puoi servirlo come file statico dallo stesso backend
-  (mettilo in `src/main/resources/static/`) oppure separatamente su
-  Netlify/Vercel/GitHub Pages, aggiornando `API_URL` in `index.html`
+Stack: **Neon** (Postgres + pgvector), **Render** (backend, free tier),
+frontend servito da Spring, build via `Dockerfile`.
 
-## Checklist prima di condividere il link
+### 1. Database su Neon
 
-- [ ] Sostituito il contenuto di esempio in `knowledge-base/` con CV e
-      README reali
-- [ ] Rimosso o protetto `/api/admin/ingest` (non deve restare aperto in
-      produzione)
-- [ ] Limitato `@CrossOrigin` al dominio reale del frontend, non `*`
-- [ ] Testate 3-4 domande "cattive" (fuori tema) per verificare che il
-      chatbot ammetta di non saperlo invece di inventare
-- [ ] Aggiunto un breve footer nella pagina con lo stack tecnico usato,
-      così è leggibile a colpo d'occhio anche senza aprire il codice
+1. Crea un progetto su [neon.tech](https://neon.tech) (free)
+2. Nel SQL Editor: `CREATE EXTENSION IF NOT EXISTS vector;`
+3. Applica lo schema (dal SQL Editor incolla il contenuto di
+   `db/migration/V1__init.sql` e poi `V2__feedback.sql`)
+4. Dalla pagina "Connection Details" prendi host, database, user, password
+
+### 2. Repo su GitHub
+
+Il progetto va su un repo Git (Render deploya da lì). `content/` e
+`summary.json` restano fuori (gitignorati).
+
+### 3. Backend su Render
+
+1. New → Web Service → collega il repo GitHub
+2. Runtime: **Docker** (il `Dockerfile` viene rilevato)
+3. Variabili d'ambiente:
+
+   | Variabile | Valore |
+   |---|---|
+   | `ANTHROPIC_API_KEY` | la tua chiave Claude |
+   | `VOYAGE_API_KEY` | la tua chiave Voyage |
+   | `ADMIN_BYPASS_PASSWORD` | una password a scelta (dev mode) |
+   | `DB_HOST` `DB_NAME` `DB_USER` `DB_PASSWORD` | da Neon |
+   | `DB_SSLMODE` | `require` |
+   | `SUMMARY_STATIC_FILE` | `/etc/secrets/summary.json` |
+
+4. Secret Files → aggiungi `summary.json` con il contenuto del file locale
+5. Deploy. Al primo avvio Render fa la build Docker (~3-5 min).
+
+### 4. Popolare la KB in produzione
+
+```bash
+BASE=https://tuo-servizio.onrender.com ADMIN_PW=... bash reingest.sh
+```
+
+(oppure attiva la dev mode dal sito e chiama `/api/admin/ingest` a mano per
+i 4 file). ~10 min per il rate limit di Voyage.
+
+### 5. Test
+
+Da un dispositivo che non è il tuo, senza VPN: cold start, 5-6 domande
+(incluse un paio fuori tema), feedback, "Genera Riassunto" IT + EN.
+
+## Note sul deploy già gestite nel codice
+
+- `/api/admin/ingest` (POST e DELETE) è protetto dal token dev mode
+- CORS è disattivo di default (stessa origine); si abilita solo con
+  `CORS_ALLOWED_ORIGINS` per uno sviluppo con frontend su altra origine
+- La porta viene da `$PORT` (Render la assegna)
+- L'IP per il rate limiting è letto da `X-Forwarded-For` (necessario dietro
+  il proxy di Render)
 
 ## Sicurezza implementata
 
@@ -165,8 +209,9 @@ qualsiasi static server) mentre il backend gira su `localhost:8080`.
 
 ## Possibili estensioni future
 
-- Rate limiting sull'endpoint `/api/chat` (per non bruciare crediti API se
-  il link finisce in giro)
+- Hybrid search (full-text + vettoriale) per i nomi esatti di
+  framework/librerie che il solo embedding a volte generalizza
 - Streaming della risposta (Server-Sent Events) invece di attendere la
   risposta completa
-- Log delle domande ricevute, per capire cosa chiedono davvero i visitatori
+- Architettura configuration-driven: rendere identità, regole e contenuti
+  configurazione esterna, così lo stesso codice serve chatbot diversi

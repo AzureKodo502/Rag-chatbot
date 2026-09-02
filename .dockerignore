@@ -1,0 +1,8 @@
+target/
+.git/
+.idea/
+.claude/
+content/
+summary.json
+*.iml
+HANDOFF.md

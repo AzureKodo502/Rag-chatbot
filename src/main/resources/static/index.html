@@ -625,7 +625,11 @@
 </form>
 
 <script>
-  const API_BASE = "http://localhost:8080"; // in produzione, sostituisci con l'URL pubblico del backend
+  // Il frontend è servito da Spring Boot come risorsa statica sulla stessa
+  // origine del backend: le chiamate API sono quindi relative. Per aprire
+  // l'HTML separatamente (es. da un altro host) valorizzare con l'URL del
+  // backend, es. "http://localhost:8080".
+  const API_BASE = "";
   const API_CHAT_URL = API_BASE + "/api/chat";
   const API_STATUS_URL = API_BASE + "/api/chat/status";
   const API_ADMIN_LOGIN_URL = API_BASE + "/api/admin/login";

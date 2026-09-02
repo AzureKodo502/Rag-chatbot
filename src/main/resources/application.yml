@@ -16,6 +16,13 @@ spring:
     hikari:
       # Neon free tier ha un limite basso di connessioni: teniamo il pool piccolo
       maximum-pool-size: ${DB_POOL_SIZE:5}
+      minimum-idle: 1
+      # -1 = non bloccare l'avvio se il DB non risponde subito (Neon free tier
+      # va in sleep). L'app parte, apre la porta — così Render non fallisce il
+      # deploy — e le connessioni si aprono al primo uso, quando Neon si è
+      # svegliato. Senza questo, un avvio con Neon freddo = deploy fallito.
+      initialization-fail-timeout: -1
+      connection-timeout: 20000
 
 app:
   cors:

@@ -173,12 +173,14 @@ Il grosso del lavoro prima di mettere il link nel CV.
       sito, visibile solo con dev mode attiva, che legge
       `GET /api/admin/feedback` e mostra media stelle, distribuzione e
       commenti recenti, senza aprire l'endpoint JSON a mano
-- [ ] **Posizione del pulsante "Genera Riassunto"** — ora sta sotto le chip;
-      funziona ma si può valorizzare (box dedicato, CTA più evidente)
-- [ ] **Resa su smartphone** — testato da 2 persone su telefono, funziona ma
-      la visualizzazione mobile è migliorabile (barra in alto affollata,
-      spaziature, dimensioni testo, la card feedback / il pannello riassunto
-      su schermi stretti). Giro di rifinitura responsive.
+- [x] **Posizione del pulsante "Genera Riassunto"** — FATTO (2026-09-02).
+      Box dedicato `.summary-cta` con etichetta "Hai poco tempo?" + prefisso
+      "▸", staccato dalle chip, full-width su mobile.
+- [x] **Resa su smartphone** — FATTO (2026-09-02). `@media (max-width: 600px)`:
+      barra ridotta a nome + toggle lingua (barra 85→52px), h1 28→22px,
+      spaziature compatte, textarea 16px (no zoom iOS), niente più scroll
+      orizzontale, feedback card / pannello riassunto rientrano. Verificato
+      live a 375px.
 - [x] Cookie `SameSite=None; Secure` → `Lax` — FATTO (2026-09-02). Frontend
       same-origin, Lax dà anche protezione CSRF di base. Scrittura cookie
       centralizzata in `HttpRequests.setAppCookie`. Dev mode ri-verificata su

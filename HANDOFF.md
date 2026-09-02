@@ -513,8 +513,13 @@ browser vero (feedback + riassunto).
 ## Fase 4 — Deploy: preparazione codice FATTA (2026-09-02)
 
 Stack scelto: **Neon** (DB) + **Render** (backend, free) + frontend servito
-da Spring + **Dockerfile**. Repo Git inizializzato (`main`, primo commit
-`2f943c5` baseline + un commit con le modifiche deploy).
+da Spring + **Dockerfile**.
+
+**Repo GitHub (privato):** https://github.com/AzureKodo502/Rag-chabot
+— pushato il 2026-09-02 (`main`, 3 commit). Verificato che il tree remoto
+NON contiene `content/`, `summary.json`, `.idea/`, `target/`.
+NB: il nome ha un refuso ("chabot" invece di "chatbot") — rinominabile su
+GitHub prima che vada nel CV (redirect automatico + aggiornare il remote).
 
 ### Modifiche fatte (verificate: `mvn package` online OK; smoke test del jar
 su :8090; **`docker build` OK + immagine avviata** contro il Postgres locale
@@ -545,7 +550,7 @@ via `host.docker.internal` → parte in ~2s su JRE 21, `/` serve l'app,
 
 ### DA FARE (richiede account dell'utente — non fattibile da qui)
 
-1. Repo su GitHub (privato per ora), `git remote add origin` + push
+1. ~~Repo GitHub + push~~ — FATTO (2026-09-02)
 2. Neon: progetto → `CREATE EXTENSION vector` → applica `V1` + `V2` →
    copiare host/db/user/password
 3. Render: Web Service da Docker, env var (vedi tabella nel README), Secret

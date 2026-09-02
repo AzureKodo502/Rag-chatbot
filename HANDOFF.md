@@ -497,8 +497,10 @@ Genera Riassunto — tutto verificato, feedback e riassunto anche e2e via
 browser vero (feedback + riassunto).
 
 **ROADMAP riordinata (2026-09-02):** deploy anticipato.
-- **Fase 4 = Deploy** (era Fase 5). Il prodotto è pronto, il link serve nel
-  CV ora.
+- **Fase 4 = Deploy** — ✅ LIVE e verificato su
+  https://rag-chatbot-0uwq.onrender.com (Neon + Render + Docker, KB a 29
+  chunk). Resta solo il test dell'utente da telefono e, prima di mettere il
+  link nel CV: rendere il repo pubblico + pulizia doc (Fase 6).
 - **Fase 5 = Differenziatori tecnici** (hybrid search + cache esatta — era
   Fase 4). Aggiornamenti applicabili in qualsiasi momento sul sito live.
 - Fase 6 = Rifinitura CV (invariata; contiene il pannello Analytics in-app e
@@ -548,15 +550,44 @@ via `host.docker.internal` → parte in ~2s su JRE 21, `/` serve l'app,
   "attach" a `http://localhost:8080` (il frontend-static non serve più).
 - README: sezione Deploy riscritta con i passi Neon/Render + tabella env var.
 
-### DA FARE (richiede account dell'utente — non fattibile da qui)
+### FATTO (2026-09-02)
 
-1. ~~Repo GitHub + push~~ — FATTO (2026-09-02)
-2. Neon: progetto → `CREATE EXTENSION vector` → applica `V1` + `V2` →
-   copiare host/db/user/password
-3. Render: Web Service da Docker, env var (vedi tabella nel README), Secret
-   File `summary.json` + `SUMMARY_STATIC_FILE=/etc/secrets/summary.json`
-4. Dopo il 1° deploy: `BASE=https://... ADMIN_PW=... bash reingest.sh`
-5. Test da un altro dispositivo
+1. ~~Repo GitHub + push~~ — repo `AzureKodo502/Rag-chatbot` (privato),
+   `main` pushato.
+2. ~~Neon~~ — progetto `polished-voice-31457398`, branch `production`.
+   `CREATE EXTENSION vector` + `document_chunks` + `feedback` create dal SQL
+   Editor. Host DIRETTO (senza `-pooler`):
+   `ep-green-tree-b1bkce9k.c-5.eu-central-1.aws.neon.tech`, db `neondb`,
+   user `neondb_owner`.
+3. ~~Render~~ — Web Service **rag-chatbot**, Frankfurt, Docker, Free
+   (512 MB). Env var + Secret File `summary.json` configurati.
+   **URL: https://rag-chatbot-0uwq.onrender.com**
+4. ~~Re-ingest prod~~ — FATTO: 29 chunk su Neon (cv 14, p1 5, p2 4, p3 6),
+   cache summary rigenerata. `reingest.sh` accetta `BASE` + `ADMIN_PW`.
+5. Test da un altro dispositivo (telefono) — **DA FARE dall'utente**: cold
+   start reale, giro di domande, feedback, Genera Riassunto.
+
+### Verifica deploy a KB popolata (curl, 2026-09-02) — TUTTO OK
+
+- `GET /` → 200, serve `index.html` da Spring
+- `POST /api/chat` "Che voto ha preso alla laurea e di che parla la tesi?"
+  → 200 in 4.6s (a caldo: retrieval **205ms**, generazione 4.2s), risposta
+  accurata e ancorata, 6 fonti citate (cv.txt ×2, progetto2.txt ×4)
+- `POST /api/summary` IT → 200, `formazione` con "2022–2026", `stack` senza
+  FastAPI/Flyway
+- `POST /api/feedback` → 201 (scrive nella tabella `feedback` di Neon)
+- `/api/admin/ingest` → 401 senza dev mode ✓
+- CORS da origine estranea → 403 ✓
+- Prima query "fredda" (Neon scale-to-zero) ~19s; a caldo sub-secondo
+
+### Note prod
+
+- **Doppio cold-start**: Render spegne dopo 15 min, Neon dopo 5 min. La
+  schermata cold-start copre il risveglio di Render (`wakeBackend` ping
+  `/status`, che NON tocca il DB). La PRIMA domanda vera resta lenta (~15s)
+  finché Neon non si scalda. Keep-alive → Fase 6.
+- `ADMIN_BYPASS_PASSWORD` di prod ≠ quella locale (`SHDW_GRND`). Per lo
+  script prod: `ADMIN_PW=<quella di Render>`.
 
 ### Env var necessarie su Render
 

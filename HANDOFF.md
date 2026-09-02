@@ -516,8 +516,10 @@ Stack scelto: **Neon** (DB) + **Render** (backend, free) + frontend servito
 da Spring + **Dockerfile**. Repo Git inizializzato (`main`, primo commit
 `2f943c5` baseline + un commit con le modifiche deploy).
 
-### Modifiche fatte (verificate: `mvn package` online OK + smoke test del jar
-su porta 8090 contro il Postgres locale)
+### Modifiche fatte (verificate: `mvn package` online OK; smoke test del jar
+su :8090; **`docker build` OK + immagine avviata** contro il Postgres locale
+via `host.docker.internal` → parte in ~2s su JRE 21, `/` serve l'app,
+`/api/chat/status` 200, `/api/admin/ingest` 401)
 
 - **Frontend spostato**: `frontend/index.html` → `src/main/resources/static/
   index.html`. Spring lo serve su `/`. `API_BASE` da `http://localhost:8080`

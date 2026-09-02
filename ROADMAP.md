@@ -174,6 +174,10 @@ Il grosso del lavoro prima di mettere il link nel CV.
       commenti recenti, senza aprire l'endpoint JSON a mano
 - [ ] **Posizione del pulsante "Genera Riassunto"** — ora sta sotto le chip;
       funziona ma si può valorizzare (box dedicato, CTA più evidente)
+- [ ] **Resa su smartphone** — testato da 2 persone su telefono, funziona ma
+      la visualizzazione mobile è migliorabile (barra in alto affollata,
+      spaziature, dimensioni testo, la card feedback / il pannello riassunto
+      su schermi stretti). Giro di rifinitura responsive.
 - [ ] Cookie `SameSite=None; Secure` → `Lax` ora che il frontend è
       same-origin (ri-verificare la dev mode)
 - [ ] Link aggiornato nel CV e nei profili (LinkedIn, GitHub) — **ultimo**

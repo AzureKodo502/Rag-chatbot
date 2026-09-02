@@ -3,7 +3,6 @@ package com.portfolio.ragchatbot.controller;
 import com.portfolio.ragchatbot.repository.FeedbackRepository;
 import com.portfolio.ragchatbot.service.AdminSessionService;
 import com.portfolio.ragchatbot.service.FeedbackService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +27,7 @@ public class FeedbackController {
     public ResponseEntity<?> submit(@RequestBody FeedbackRequest request, HttpServletRequest httpRequest) {
         FeedbackService.Result result = feedbackService.submit(
                 request.rating(), request.comment(), request.lang(), request.interactions(),
-                resolveClientIp(httpRequest));
+                HttpRequests.clientIp(httpRequest));
 
         if (result instanceof FeedbackService.Result.Saved) {
             return ResponseEntity.status(HttpStatus.CREATED).body(new MessageResponse("ok"));
@@ -44,7 +43,7 @@ public class FeedbackController {
     @GetMapping("/api/admin/feedback")
     public ResponseEntity<?> dashboard(HttpServletRequest httpRequest) {
         boolean isAdmin = adminSessionService.isValidToken(
-                readCookie(httpRequest, AdminController.ADMIN_COOKIE_NAME));
+                HttpRequests.cookie(httpRequest, AdminController.ADMIN_COOKIE_NAME));
         if (!isAdmin) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new MessageResponse("Non autorizzato."));
         }
@@ -62,24 +61,6 @@ public class FeedbackController {
         String createdAt = row.createdAt() == null ? null
                 : row.createdAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         return new FeedbackItem(row.id(), row.rating(), row.comment(), row.lang(), row.interactions(), createdAt);
-    }
-
-    private String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
-    }
-
-    private String readCookie(HttpServletRequest request, String name) {
-        if (request.getCookies() == null) return null;
-        for (Cookie cookie : request.getCookies()) {
-            if (name.equals(cookie.getName())) {
-                return cookie.getValue();
-            }
-        }
-        return null;
     }
 
     public record FeedbackRequest(Integer rating, String comment, String lang, Integer interactions) {

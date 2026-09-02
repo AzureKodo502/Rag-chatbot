@@ -2,6 +2,8 @@ package com.portfolio.ragchatbot.service;
 
 import com.portfolio.ragchatbot.model.DocumentChunk;
 import com.portfolio.ragchatbot.repository.VectorRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -10,6 +12,8 @@ import java.util.List;
 
 @Service
 public class IngestionService {
+
+    private static final Logger log = LoggerFactory.getLogger(IngestionService.class);
 
     private final EmbeddingService embeddingService;
     private final VectorRepository vectorRepository;
@@ -46,8 +50,8 @@ public class IngestionService {
 
             boolean isLastChunk = (i == chunks.size() - 1);
             if (!isLastChunk && delayBetweenChunksMs > 0) {
-                System.out.println("Chunk " + (i + 1) + "/" + chunks.size() + " salvato, attendo "
-                        + (delayBetweenChunksMs / 1000) + "s prima del prossimo...");
+                log.info("[{}] chunk {}/{} salvato, attendo {}s", source, i + 1, chunks.size(),
+                        delayBetweenChunksMs / 1000);
                 sleep(delayBetweenChunksMs);
             }
         }

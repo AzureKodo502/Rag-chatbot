@@ -2,6 +2,8 @@ package com.portfolio.ragchatbot.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +16,7 @@ import java.time.Duration;
 @Service
 public class EmbeddingService {
 
+    private static final Logger log = LoggerFactory.getLogger(EmbeddingService.class);
     private static final int MAX_RETRIES = 4;
     private static final long INITIAL_BACKOFF_MS = 5000;
 
@@ -52,8 +55,8 @@ public class EmbeddingService {
                     throw new RuntimeException(
                             "Limite di richieste Voyage AI superato anche dopo " + MAX_RETRIES + " tentativi.", e);
                 }
-                System.out.println("Rate limit Voyage AI, riprovo tra " + (backoff / 1000) + "s (tentativo "
-                        + attempt + "/" + MAX_RETRIES + ")...");
+                log.warn("Rate limit Voyage AI, riprovo tra {}s (tentativo {}/{})",
+                        backoff / 1000, attempt, MAX_RETRIES);
                 sleep(backoff);
                 backoff *= 2;
             } catch (Exception e) {

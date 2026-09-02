@@ -2,7 +2,6 @@ package com.portfolio.ragchatbot.controller;
 
 import com.portfolio.ragchatbot.service.AdminSessionService;
 import com.portfolio.ragchatbot.service.IngestionService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,17 +46,8 @@ public class IngestionController {
     }
 
     private boolean isAdmin(HttpServletRequest request) {
-        return adminSessionService.isValidToken(readCookie(request, AdminController.ADMIN_COOKIE_NAME));
-    }
-
-    private String readCookie(HttpServletRequest request, String name) {
-        if (request.getCookies() == null) return null;
-        for (Cookie cookie : request.getCookies()) {
-            if (name.equals(cookie.getName())) {
-                return cookie.getValue();
-            }
-        }
-        return null;
+        return adminSessionService.isValidToken(
+                HttpRequests.cookie(request, AdminController.ADMIN_COOKIE_NAME));
     }
 
     public record IngestRequest(String source, String text) {

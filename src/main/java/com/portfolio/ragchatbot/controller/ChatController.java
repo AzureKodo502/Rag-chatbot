@@ -5,7 +5,6 @@ import com.portfolio.ragchatbot.service.ChatAnswer;
 import com.portfolio.ragchatbot.service.ChatService;
 import com.portfolio.ragchatbot.service.PromptGuardService;
 import com.portfolio.ragchatbot.service.RateLimitService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,9 +39,9 @@ public class ChatController {
 
     @GetMapping("/status")
     public ResponseEntity<?> status(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-        String clientIp = resolveClientIp(httpRequest);
+        String clientIp = HttpRequests.clientIp(httpRequest);
         String sessionId = resolveOrCreateSessionId(httpRequest, httpResponse);
-        boolean isAdmin = adminSessionService.isValidToken(readCookie(httpRequest, AdminController.ADMIN_COOKIE_NAME));
+        boolean isAdmin = adminSessionService.isValidToken(HttpRequests.cookie(httpRequest, AdminController.ADMIN_COOKIE_NAME));
 
         if (isAdmin) {
             return withAdminHeaders(ResponseEntity.ok()).body("{}");
@@ -55,9 +54,9 @@ public class ChatController {
     @PostMapping
     public ResponseEntity<?> chat(@RequestBody ChatRequest request, HttpServletRequest httpRequest,
                                   HttpServletResponse httpResponse) {
-        String clientIp = resolveClientIp(httpRequest);
+        String clientIp = HttpRequests.clientIp(httpRequest);
         String sessionId = resolveOrCreateSessionId(httpRequest, httpResponse);
-        boolean isAdmin = adminSessionService.isValidToken(readCookie(httpRequest, AdminController.ADMIN_COOKIE_NAME));
+        boolean isAdmin = adminSessionService.isValidToken(HttpRequests.cookie(httpRequest, AdminController.ADMIN_COOKIE_NAME));
 
         if (!isAdmin) {
             RateLimitService.RateLimitStatus rateLimit = rateLimitService.checkAndRecord(clientIp, sessionId);
@@ -106,16 +105,8 @@ public class ChatController {
         return builder.header("X-Admin-Bypass", "true");
     }
 
-    private String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
-    }
-
     private String resolveOrCreateSessionId(HttpServletRequest request, HttpServletResponse response) {
-        String existing = readCookie(request, SESSION_COOKIE_NAME);
+        String existing = HttpRequests.cookie(request, SESSION_COOKIE_NAME);
         if (existing != null) {
             return existing;
         }
@@ -128,16 +119,6 @@ public class ChatController {
                 + "; Path=/; Max-Age=2592000; HttpOnly; SameSite=None; Secure";
         response.addHeader("Set-Cookie", cookieHeader);
         return newSessionId;
-    }
-
-    private String readCookie(HttpServletRequest request, String name) {
-        if (request.getCookies() == null) return null;
-        for (Cookie cookie : request.getCookies()) {
-            if (name.equals(cookie.getName())) {
-                return cookie.getValue();
-            }
-        }
-        return null;
     }
 
     public record ChatRequest(String message) {

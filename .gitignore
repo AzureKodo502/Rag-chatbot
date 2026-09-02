@@ -14,3 +14,6 @@ target/
 .idea/
 *.iml
 .DS_Store
+
+# Doc di lavoro interno, non per il repo pubblico
+HANDOFF.md

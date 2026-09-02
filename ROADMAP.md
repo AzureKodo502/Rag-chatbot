@@ -179,8 +179,11 @@ Il grosso del lavoro prima di mettere il link nel CV.
       la visualizzazione mobile è migliorabile (barra in alto affollata,
       spaziature, dimensioni testo, la card feedback / il pannello riassunto
       su schermi stretti). Giro di rifinitura responsive.
-- [ ] Cookie `SameSite=None; Secure` → `Lax` ora che il frontend è
-      same-origin (ri-verificare la dev mode)
+- [x] Cookie `SameSite=None; Secure` → `Lax` — FATTO (2026-09-02). Frontend
+      same-origin, Lax dà anche protezione CSRF di base. Scrittura cookie
+      centralizzata in `HttpRequests.setAppCookie`. Dev mode ri-verificata su
+      prod da browser reale: login → richiesta same-origin riconosciuta come
+      admin.
 - [ ] Link aggiornato nel CV e nei profili (LinkedIn, GitHub) — **ultimo**
 
 **Criterio di completamento**: apri il link davanti a un tech lead senza

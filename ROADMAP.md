@@ -164,10 +164,11 @@ Il grosso del lavoro prima di mettere il link nel CV.
 - [ ] Sezione "Decisioni di design" nel README — dimostra giudizio
       ingegneristico, non solo capacità di scrivere codice
 - [ ] GIF o breve video demo nel README
-- [ ] **Keep-alive**: un ping periodico (cron esterno o UptimeRobot) a
-      `/api/chat/status` per tenere Render sveglio, + una query banale che
-      tiene caldo anche Neon, così la prima domanda di un recruiter non è
-      lenta 15-20s
+- [x] **Keep-alive** — FATTO (2026-09-02). `GET /api/health` (count sul DB,
+      ritorna `{status, chunks, dbLatencyMs}`) + `.github/workflows/
+      keep-alive.yml` che lo pinga ogni ~10 min + il frontend chiama
+      `/api/health` a fine cold-start per svegliare Neon prima della prima
+      domanda. Verificato in prod.
 - [ ] **Pannello "Analytics" in-app (modalità sviluppatore)** — sezione nel
       sito, visibile solo con dev mode attiva, che legge
       `GET /api/admin/feedback` e mostra media stelle, distribuzione e

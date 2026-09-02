@@ -278,7 +278,7 @@ stato di errore, pulsante Riprova.
 
 Retrieval: "con che votazione si è laureato" da sola non recupera il
 chunk giusto (query troppo corta/sparsa) — atteso, lo risolve la hybrid
-search (ora Fase 5, post-deploy). "Che voto ha preso alla laurea" invece
+search (vedi "Aggiornamenti tecnici" nella ROADMAP). "Che voto ha preso alla laurea" invece
 funziona.
 
 ## Stato: Fase 3 — toggle IT/EN FATTO (2026-09-01)
@@ -486,7 +486,7 @@ Il pulsante "Genera Riassunto" NON scrolla più la pagina: prima
 `renderSummary` e il pending facevano `window.scrollTo(bottom)` e il recruiter
 si ritrovava in fondo. Ora la pagina resta ferma, il pannello compare sotto
 (ancora in vista) e si scorre a leggere. Posizione del pulsante (sotto le
-chip): funziona, da valorizzare in Fase 6 (nota in ROADMAP).
+chip): funziona, da valorizzare in Fase 5 (nota in ROADMAP).
 
 ## Riepilogo stato (2026-09-02) e prossimi passi
 
@@ -496,21 +496,23 @@ Genera Riassunto — tutto verificato, feedback e riassunto anche e2e via
 `curl`. KB re-ingerita con i contenuti corretti. Manca solo il giro nel
 browser vero (feedback + riassunto).
 
-**ROADMAP riordinata (2026-09-02):** deploy anticipato.
-- **Fase 4 = Deploy** — ✅ LIVE e verificato su
-  https://rag-chatbot-0uwq.onrender.com (Neon + Render + Docker, KB a 29
-  chunk). Resta solo il test dell'utente da telefono e, prima di mettere il
-  link nel CV: rendere il repo pubblico + pulizia doc (Fase 6).
-- **Fase 5 = Differenziatori tecnici** (hybrid search + cache esatta — era
-  Fase 4). Aggiornamenti applicabili in qualsiasi momento sul sito live.
-- Fase 6 = Rifinitura CV (invariata; contiene il pannello Analytics in-app e
-  il ritocco alla posizione del pulsante Riassunto).
-- **Fase 7 = Architettura configuration-driven** (de-hardcoding). NON un
-  prodotto da vendere: separare codice / dati / policy. Config minima e
-  sensata — identità, comportamento (regole system prompt), lingua, stile di
+**ROADMAP riordinata di nuovo (2026-09-02, dopo il deploy):**
+- **Fase 4 = Deploy** — ✅ LIVE su https://rag-chatbot-0uwq.onrender.com
+  (Neon + Render + Docker, KB a 29 chunk). Test da telefono: fatto,
+  funziona.
+- **Fase 5 = Rifinitura per il CV** ← **prossima**. Repo da privato a
+  pubblico (dopo audit doc), README presentabile + "Decisioni di design",
+  GIF demo, **keep-alive** (cron ping per non far trovare Render/Neon
+  freddi), pannello Analytics in dev mode, posizione pulsante Riassunto,
+  cookie `SameSite` → `Lax`. Ultimo: link nel CV.
+- **Fase 6 = Architettura configuration-driven** (de-hardcoding). NON un
+  prodotto da vendere: separare codice / dati / policy. Config minima —
+  identità, comportamento (regole system prompt), lingua, stile di
   scrittura, KB, UI. Criterio: cambi un file di config e il bot parla di
-  un'altra persona, senza toccare `.java`. Multi-tenant SaaS = ipotesi
-  lontana citata nella roadmap, esplicitamente non pianificata.
+  un'altra persona senza toccare `.java`. Multi-tenant SaaS = ipotesi
+  lontana, non pianificata.
+- **"Aggiornamenti tecnici" (senza fase)**: hybrid search + cache esatta,
+  applicabili in qualsiasi momento sul sito live.
 
 ## Fase 4 — Deploy: preparazione codice FATTA (2026-09-02)
 
@@ -585,7 +587,7 @@ via `host.docker.internal` → parte in ~2s su JRE 21, `/` serve l'app,
 - **Doppio cold-start**: Render spegne dopo 15 min, Neon dopo 5 min. La
   schermata cold-start copre il risveglio di Render (`wakeBackend` ping
   `/status`, che NON tocca il DB). La PRIMA domanda vera resta lenta (~15s)
-  finché Neon non si scalda. Keep-alive → Fase 6.
+  finché Neon non si scalda. Keep-alive → Fase 5.
 - `ADMIN_BYPASS_PASSWORD` di prod ≠ quella locale (`SHDW_GRND`). Per lo
   script prod: `ADMIN_PW=<quella di Render>`.
 
@@ -599,10 +601,10 @@ via `host.docker.internal` → parte in ~2s su JRE 21, `/` serve l'app,
 
 - I cookie `rag_admin_token` e `rag_session_id` sono ancora
   `SameSite=None; Secure`. Con frontend same-origin `SameSite=Lax` sarebbe
-  più corretto — cambio piccolo, da fare in Fase 6 (serve ri-verificare la
+  più corretto — cambio piccolo, da fare in Fase 5 (serve ri-verificare la
   dev mode).
 - `readCookie` duplicato in 3 controller (Feedback, Summary, Ingestion) —
-  estrarre in un helper quando si tocca quella zona (Fase 7 pulizia).
+  estrarre in un helper quando si tocca quella zona (Fase 6 pulizia).
 - Build locale: `mvn package` offline fallisce (surefire non in cache);
   usare online, oppure `mvn compile` per il check veloce. Il Docker build
   gira online e fa il `package` completo.

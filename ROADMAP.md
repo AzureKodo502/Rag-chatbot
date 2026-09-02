@@ -85,7 +85,7 @@ injection e il bot resta in tema senza rivelare le istruzioni.
       da recruiter/tech lead.
       Limite noto residuo: query che uniscono due argomenti scorrelati
       (es. "modelli AI + link GitHub") a volte recuperano bene solo il
-      primo — lo risolve la hybrid search della Fase 4.
+      primo — lo risolverà la hybrid search (vedi "Aggiornamenti tecnici").
 - [x] Schermata cold start (skeleton loading mentre il backend si sveglia
       da sleep su free tier) — FATTO (2026-08-31). Overlay `#cold-start`
       in `frontend/index.html`: skeleton shimmer + messaggi a rotazione
@@ -136,75 +136,54 @@ recruiter senza sentirti in imbarazzo per qualche dettaglio grezzo.
 
 ---
 
-> **Nota sull'ordine (2026-09-02):** deploy anticipato. Il prodotto è
-> funzionante e rifinito con contenuti reali, quindi va messo online SUBITO
-> (il link serve nel CV ora). Hybrid search e cache diventano aggiornamenti
-> applicabili in qualsiasi momento sul sito già live.
+## Fase 4 — Deploy — ✅ FATTO (2026-09-02)
 
-## Fase 4 — Deploy
+**LIVE: https://rag-chatbot-0uwq.onrender.com**
 
-- [ ] Database managed (Neon o Supabase) con pgvector abilitato; applicare
-      `V1__init.sql` e `V2__feedback.sql` sul DB di produzione
-- [ ] Backend su Render o Railway, variabili d'ambiente configurate
-      (`ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, `DB_*`, `ADMIN_BYPASS_PASSWORD`)
-- [ ] `summary.json` in produzione: montato come file o passato via
-      `SUMMARY_STATIC_FILE` (oggi è gitignorato e letto dalla working dir)
-- [ ] Frontend servito come statico dallo stesso backend (risolve anche i
-      cookie cross-site della dev mode) o su hosting separato; aggiornare
-      `API_BASE` in `index.html` (oggi hard-coded `http://localhost:8080`)
-- [ ] Popolare la KB sul DB di produzione (re-ingest dei 4 file → altra
-      quota Voyage; con il free tier a 3 RPM sono ~10 min)
-- [ ] `/api/admin/ingest` protetto (token dev mode) o rimosso prima di
-      rendere pubblico
-- [ ] `@CrossOrigin(originPatterns = "*")` → limitato al dominio reale su
-      tutti i controller (`Chat`, `Admin`, `Feedback`, `Summary`, `Ingestion`)
-- [ ] Test in produzione da un dispositivo non tuo: cold start reale, rate
-      limit reale, 5-6 domande, feedback, Genera Riassunto (IT + EN)
+Neon (Postgres + pgvector) + Render (Web Service Docker, free, Frankfurt) +
+frontend servito da Spring da `src/main/resources/static/`. Repo
+`AzureKodo502/Rag-chatbot` (privato). Fatto: `Dockerfile`, `V1`+`V2` su
+Neon, KB re-ingerita (29 chunk), env var + Secret File `summary.json` su
+Render, `/api/admin/ingest` protetto, CORS off di default, `API_BASE`
+relativo. Verificato via curl: chat con fonti, Genera Riassunto, feedback →
+Neon, sicurezza. Prima query "fredda" ~19s (Neon scale-to-zero), a caldo
+sub-secondo.
 
-**Criterio di completamento**: il link nel CV funziona da un dispositivo
-che non è il tuo, senza VPN, senza sessione già "calda".
+Resta: test dell'utente da telefono ✅ (fatto, funziona); repo pubblico +
+pulizia doc → Fase 5.
 
 ---
 
-## Fase 5 — Differenziatori tecnici (aggiornamenti sul sito live)
+## Fase 5 — Rifinitura per il CV
 
-Applicabili in qualsiasi momento dopo il deploy, senza fretta.
+Il grosso del lavoro prima di mettere il link nel CV.
 
-- [ ] **Hybrid search**: full-text search Postgres (`tsvector`/BM25) +
-      similarità vettoriale, con re-ranking pesato — recupera meglio
-      nomi esatti di framework/librerie che il solo embedding a volte
-      generalizza troppo. Risolve anche i buchi su query corte (es. "con
-      che votazione si è laureato" da sola non recupera il chunk giusto).
-- [ ] Cache esatta (non semantica) sulle domande delle pillole
-      preimpostate — hash map testo→risposta, azzera la latenza solo per
-      le query più frequenti, senza la complessità di una vera cache
-      semantica
-
-**Criterio di completamento**: sai spiegare in 2 minuti perché hai scelto
-hybrid search invece di solo vettori, con un esempio concreto in cui il
-solo retrieval semantico avrebbe fallito.
-
----
-
-## Fase 6 — Rifinitura per il CV
-
-- [ ] Sezione "Decisioni di design" nel README (vedi sotto) — dimostra
-      giudizio ingegneristico, non solo capacità di scrivere codice
+- [ ] Repo GitHub da privato a **pubblico** — prima: audit dei doc
+      (`HANDOFF.md` è un doc di lavoro interno, valutare se tenerlo fuori),
+      README presentabile
+- [ ] Sezione "Decisioni di design" nel README — dimostra giudizio
+      ingegneristico, non solo capacità di scrivere codice
 - [ ] GIF o breve video demo nel README
-- [ ] Link aggiornato nel CV e nei profili (LinkedIn, GitHub)
-- [ ] **Pannello "Analytics" in-app (modalità sviluppatore)** — sezione
-      dentro il sito, visibile solo con dev mode attiva, che legge
+- [ ] **Keep-alive**: un ping periodico (cron esterno o UptimeRobot) a
+      `/api/chat/status` per tenere Render sveglio, + una query banale che
+      tiene caldo anche Neon, così la prima domanda di un recruiter non è
+      lenta 15-20s
+- [ ] **Pannello "Analytics" in-app (modalità sviluppatore)** — sezione nel
+      sito, visibile solo con dev mode attiva, che legge
       `GET /api/admin/feedback` e mostra media stelle, distribuzione e
-      commenti recenti in modo leggibile, senza aprire l'endpoint JSON o il
-      database a mano. L'endpoint protetto esiste già dalla Fase 3: questa è
-      solo comodità di lettura.
-- [ ] **Posizione del pulsante "Genera Riassunto"** — ora sta sotto le chip
-      suggerite; funziona ma si può valorizzare meglio (es. box dedicato,
-      call-to-action più evidente). Da rivedere in questa fase di rifinitura.
+      commenti recenti, senza aprire l'endpoint JSON a mano
+- [ ] **Posizione del pulsante "Genera Riassunto"** — ora sta sotto le chip;
+      funziona ma si può valorizzare (box dedicato, CTA più evidente)
+- [ ] Cookie `SameSite=None; Secure` → `Lax` ora che il frontend è
+      same-origin (ri-verificare la dev mode)
+- [ ] Link aggiornato nel CV e nei profili (LinkedIn, GitHub) — **ultimo**
+
+**Criterio di completamento**: apri il link davanti a un tech lead senza
+dover spiegare o scusarti per niente.
 
 ---
 
-## Fase 7 — Architettura configuration-driven (de-hardcoding)
+## Fase 6 — Architettura configuration-driven (de-hardcoding)
 
 **Non è un prodotto da vendere.** È separare **codice**, **dati** e
 **policy**: oggi identità, contenuti e comportamento del bot sono sparsi tra
@@ -244,6 +223,23 @@ ricompilare.
 multi-tenant ospitato ("configura il tuo chatbot", un utente per tenant, con
 auth e onboarding). Fuori scope: sarebbe un prodotto vero, con infrastruttura,
 billing e GDPR di conseguenza. Resta un'ipotesi lontana, non un obiettivo.
+
+---
+
+## Aggiornamenti tecnici — in qualsiasi momento sul sito live
+
+Non hanno un posto fisso nell'ordine: il sito è già online e funziona, questi
+lo migliorano quando capita. Buoni argomenti da colloquio.
+
+- [ ] **Hybrid search**: full-text search Postgres (`tsvector`/BM25) +
+      similarità vettoriale, con re-ranking pesato — recupera meglio i nomi
+      esatti di framework/librerie che il solo embedding a volte generalizza.
+      Risolve anche i buchi su query molto corte (es. "con che votazione si è
+      laureato" da sola non pesca il chunk giusto — verificato). Sai spiegare
+      in 2 minuti perché hybrid invece di solo vettori, con un esempio.
+- [ ] **Cache esatta** (non semantica) sulle domande delle chip preimpostate
+      — hash map testo→risposta, azzera la latenza per le query più
+      frequenti, senza la complessità di una cache semantica.
 
 ---
 

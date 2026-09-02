@@ -555,7 +555,7 @@
 </div>
 
 <div class="bar">
-  <span class="name">Nome Cognome</span>
+  <span class="name">Assistente AI di Oleksandr</span>
   <div class="right">
     <div class="lang-toggle" id="lang-toggle" role="group" aria-label="Lingua / Language">
       <button type="button" class="lang-opt" data-lang="it">IT</button>
@@ -677,6 +677,7 @@
     it: {
       htmlLang: 'it',
       title: 'Chiedimi qualcosa — Chatbot RAG',
+      barName: 'Assistente AI di Oleksandr',
       debugToggle: 'ispeziona query vettoriale',
       adminLink: 'modalità sviluppatore',
       adminBadge: '🔓 dev mode attiva',
@@ -688,7 +689,7 @@
         'Perché hai scelto PostgreSQL con pgvector?',
         'Parlami della tua tesi o del tuo progetto gestionale.'
       ],
-      inputPlaceholder: 'Scrivi una domanda... (Invio per inviare, Shift+Invio per andare a capo)',
+      inputPlaceholder: 'Scrivi una domanda…',
       sendBtn: 'Invia',
       labelUser: 'tu',
       labelBot: 'assistente',
@@ -748,6 +749,7 @@
     en: {
       htmlLang: 'en',
       title: 'Ask me anything — RAG Chatbot',
+      barName: "Oleksandr's AI Assistant",
       debugToggle: 'inspect vector query',
       adminLink: 'developer mode',
       adminBadge: '🔓 dev mode on',
@@ -759,7 +761,7 @@
         'Why did you choose PostgreSQL with pgvector?',
         'Tell me about your thesis or your management-simulation project.'
       ],
-      inputPlaceholder: 'Type a question... (Enter to send, Shift+Enter for a new line)',
+      inputPlaceholder: 'Type a question…',
       sendBtn: 'Send',
       labelUser: 'you',
       labelBot: 'assistant',
@@ -830,6 +832,7 @@
   function applyLanguage() {
     document.documentElement.lang = t.htmlLang;
     document.title = t.title;
+    document.querySelector('.bar .name').textContent = t.barName;
     document.querySelector('.debug-toggle span').textContent = t.debugToggle;
     adminLink.textContent = t.adminLink;
     adminBadge.textContent = t.adminBadge;

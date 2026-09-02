@@ -19,5 +19,8 @@ COPY --from=build /app/target/rag-chatbot-*.jar app.jar
 # Render assegna la porta via $PORT; Spring la legge da server.port in application.yml.
 EXPOSE 8080
 
-# MaxRAMPercentage: il free tier di Render ha 512 MB, lasciamo margine alla JVM
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+# Free tier di Render: 512 MB e 0.1 CPU. Heap contenuto (~256 MB) per lasciare
+# spazio a metaspace + thread stack + off-heap ed evitare OOM in avvio (che si
+# manifesta come "no open ports detected"). -XX:+UseSerialGC: con 0.1 CPU il
+# GC parallelo non aiuta e costa memoria.
+ENTRYPOINT ["java", "-Xmx256m", "-XX:+UseSerialGC", "-jar", "app.jar"]

@@ -1,0 +1,26 @@
+[SOSTITUISCI QUESTO FILE CON I TUOI CONTENUTI REALI]
+
+Questo è un esempio di come strutturare un documento per la knowledge base.
+Scrivi in terza persona o prima persona in modo naturale, come se stessi
+descrivendo il tuo percorso a voce: il chatbot risponderà riformulando
+proprio questi contenuti, quindi più sono chiari e completi meglio è.
+
+Esempio di sezione "Percorso":
+Laureato in Informatica presso [Università], con tesi su [argomento].
+Durante il percorso di studi ha approfondito Java, Spring Boot, database
+relazionali e, più di recente, tecniche di Retrieval-Augmented Generation.
+
+Esempio di sezione "Progetto 1":
+Nome progetto, tecnologie usate, problema risolto, e cosa ha imparato
+costruendolo. Includi dettagli concreti (es. "gestisce autenticazione
+JWT", "espone API REST documentate con OpenAPI") perché sono queste le
+frasi che il retrieval poi recupera con precisione.
+
+Esempio di sezione "Soft skill / obiettivi":
+Cosa cerca in un ruolo, che tipo di team preferisce, disponibilità
+(on-site/remoto), lingue parlate.
+
+Suggerimento: crea un file separato per ogni "argomento" (cv.txt,
+progetto1.txt, progetto2.txt, progetto3-questo-chatbot.txt) invece di
+un unico blocco di testo enorme: rende il chunking più pulito e le
+risposte più precise.

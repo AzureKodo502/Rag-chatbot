@@ -1,0 +1,16 @@
+# Contenuti reali della knowledge base — dati personali, non da versionare
+content/
+
+# Sezioni statiche della scheda "Genera Riassunto" — formulazioni curate su
+# una persona reale, stessa logica di content/
+summary.json
+
+# Build
+target/
+*.class
+
+# Ambiente
+.env
+.idea/
+*.iml
+.DS_Store

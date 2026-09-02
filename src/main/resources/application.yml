@@ -1,0 +1,64 @@
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ragchatbot}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+
+# Chiavi/API esterne: NON committare mai le vere chiavi.
+# In produzione (Render/Railway) impostale come variabili d'ambiente.
+rag:
+  ingestion:
+    # Voyage AI free tier = 3 richieste/minuto. 15s davano 4/min e
+    # facevano scattare il 429 quasi a ogni ingestion; 21s stanno sotto
+    # il limite con un minimo di margine. Il retry con backoff in
+    # EmbeddingService resta come rete di sicurezza per i picchi.
+    delay-between-chunks-ms: 21000
+  chunk:
+    size-words: 220
+    overlap-words: 40
+  retrieval:
+    top-k: 6
+  input:
+    max-length: 300
+  rate-limit:
+    per-minute: 3
+    per-day: 10
+
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY:}
+  # NB: la proprietà si chiama "messages-url" e non "base-url" di proposito.
+  # Spring col relaxed binding mapperebbe la env var ANTHROPIC_BASE_URL (che
+  # alcuni ambienti, es. le shell di tool AI, impostano a "https://api.anthropic.com")
+  # su "anthropic.base-url", sovrascrivendo silenziosamente questo valore e
+  # facendo finire le richieste su un URL senza il path /v1/messages (404).
+  messages-url: https://api.anthropic.com/v1/messages
+  model: claude-sonnet-4-6
+  max-tokens: 600
+
+# Anthropic non espone un endpoint di embeddings: qui uso Voyage AI
+# (consigliato dalla stessa Anthropic per gli embeddings). In alternativa
+# puoi puntare a un provider compatibile OpenAI cambiando solo EmbeddingService.
+voyage:
+  api-key: ${VOYAGE_API_KEY:}
+  base-url: https://api.voyageai.com/v1/embeddings
+  model: voyage-3-lite
+  dimensions: 512
+
+# Scheda "Genera Riassunto": file con le sezioni statiche curate a mano
+# (gitignorato, come content/). Le sezioni formazione/progetti/stack sono
+# invece generate dall'LLM sulla knowledge base. Path relativo alla working
+# directory del backend; in deploy va fornito come file o via env var.
+summary:
+  static-file: ${SUMMARY_STATIC_FILE:summary.json}
+
+# Password della "modalità sviluppatore" (bypass del rate limiting).
+# Mai nel codice: solo variabile d'ambiente ADMIN_BYPASS_PASSWORD.
+# Se non impostata, la modalità sviluppatore resta disattivata.
+admin:
+  bypass-password: ${ADMIN_BYPASS_PASSWORD:}

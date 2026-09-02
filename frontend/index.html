@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chiedimi qualcosa — Chatbot RAG</title>
+<style>
+  :root {
+    --paper: #efece4;
+    --ink: #1b1b16;
+    --ink-soft: #55534a;
+    --accent: #2b4bff;
+    --rule: #d8d4c6;
+    --warn: #b3251e;
+    --gold: #9a7b1f;
+    --skeleton: #dcd8ca;
+    --skeleton-hi: #ece9df;
+    --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .bar {
+    width: 100%;
+    border-bottom: 1px solid var(--rule);
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    gap: 16px;
+  }
+
+  .bar .name { font-weight: 600; font-size: 14px; letter-spacing: 0.02em; }
+  .bar .right { display: flex; align-items: center; gap: 14px; }
+
+  .debug-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    user-select: none;
+  }
+  .debug-toggle input { accent-color: var(--accent); cursor: pointer; }
+
+  .admin-link {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    padding: 0;
+  }
+  .admin-link:hover { color: var(--accent); }
+  .admin-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold);
+    font-weight: 600;
+  }
+
+  /* --- Selettore lingua: segmented control a pillola (stile iOS), adattato
+         alla palette. Cambia solo i testi della UI: la lingua della risposta
+         dell'LLM continua a seguire quella della domanda. --- */
+  .lang-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--ink);
+    border-radius: 999px;
+    padding: 3px;
+    background: var(--paper);
+    font-family: var(--mono);
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  .lang-toggle .lang-opt {
+    position: relative;
+    z-index: 1;
+    border: none;
+    background: none;
+    font: inherit;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    padding: 3px 9px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  .lang-toggle .lang-opt.active { color: var(--paper); }
+  .lang-toggle .lang-slider {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    width: calc(50% - 3px);
+    background: var(--ink);
+    border-radius: 999px;
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .lang-toggle[data-active="en"] .lang-slider { transform: translateX(100%); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lang-toggle .lang-slider,
+    .lang-toggle .lang-opt { transition: none; }
+  }
+
+  main {
+    width: 100%;
+    max-width: 640px;
+    padding: 32px 20px 170px;
+    flex: 1;
+  }
+
+  .intro { margin-bottom: 32px; }
+
+  .intro .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  .intro h1 {
+    font-size: 28px;
+    line-height: 1.25;
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+
+  .intro p {
+    color: var(--ink-soft);
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .chip {
+    font-family: var(--mono);
+    font-size: 12px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--ink);
+    padding: 7px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip:disabled { opacity: 0.4; cursor: default; }
+
+  .summary-btn {
+    margin-top: 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 3px;
+    padding: 9px 14px;
+    cursor: pointer;
+  }
+  .summary-btn:hover { background: var(--accent); }
+  .summary-btn:disabled { opacity: 0.4; cursor: default; }
+
+  #log {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .msg {
+    font-size: 15px;
+    line-height: 1.55;
+    animation: rise 0.25s ease-out;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+
+  .msg.user .label { color: var(--ink-soft); }
+  .msg.user .label::before { content: "> "; color: var(--accent); }
+  .msg.bot .label { color: var(--accent); }
+  .msg.bot .bubble { border-left: 2px solid var(--rule); padding-left: 12px; }
+  .msg.pending .bubble { color: var(--ink-soft); }
+
+  /* --- Pannello "Genera Riassunto": scheda strutturata inserita nella chat --- */
+  .msg.summary .summary-body { border-left: 2px solid var(--accent); padding-left: 14px; }
+  .summary-body section { margin-bottom: 16px; }
+  .summary-body section:last-child { margin-bottom: 0; }
+  .summary-body h4 {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  .summary-body p { margin: 0; font-size: 14.5px; line-height: 1.5; }
+  .summary-item { margin-bottom: 10px; }
+  .summary-item:last-child { margin-bottom: 0; }
+  .summary-item strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .summary-item p { font-size: 13.5px; color: var(--ink-soft); }
+
+  .cursor {
+    display: inline-block;
+    width: 7px;
+    height: 14px;
+    background: var(--accent);
+    animation: blink 1s steps(1) infinite;
+    vertical-align: middle;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .meta { margin-top: 8px; }
+  .meta summary {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    list-style: none;
+  }
+  .meta summary::-webkit-details-marker { display: none; }
+  .meta summary::before { content: "▸ "; color: var(--accent); }
+  .meta[open] summary::before { content: "▾ "; }
+
+  .source-item {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    padding: 8px 0 8px 10px;
+    border-left: 2px solid var(--rule);
+    margin-top: 6px;
+  }
+  .source-item .src-name {
+    font-family: var(--mono);
+    color: var(--ink);
+    font-size: 11px;
+    margin-bottom: 3px;
+  }
+  .source-item .src-name .sim { color: var(--accent); margin-left: 6px; }
+
+  .debug-panel {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: rgba(43, 75, 255, 0.05);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 8px 10px;
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+  }
+
+  .error-note { font-family: var(--mono); font-size: 12.5px; color: var(--warn); }
+
+  form {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, var(--paper) 70%, transparent);
+    padding: 20px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .input-row {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    gap: 10px;
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 12px;
+    padding: 8px 8px 8px 16px;
+    align-items: flex-end;
+  }
+  .input-row.locked { border-color: var(--rule); opacity: 0.7; }
+
+  .input-row textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.4;
+    padding: 8px 0;
+    color: var(--ink);
+    resize: none;
+    overflow-y: hidden;
+    max-height: 140px;
+    font: inherit;
+  }
+
+  .input-row button {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .input-row button:disabled { opacity: 0.4; cursor: default; }
+
+  .status-bar {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    margin-top: 6px;
+    padding: 0 8px;
+    min-height: 14px;
+  }
+  .status-bar .char-counter.warn { color: var(--accent); }
+  .status-bar .char-counter.limit { color: var(--warn); }
+  .status-bar .rate-counter.limit { color: var(--warn); }
+  .status-bar .rate-counter.admin { color: var(--gold); }
+
+  .lock-message {
+    width: 100%;
+    max-width: 640px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--warn);
+    margin-top: 6px;
+    padding: 0 8px;
+    display: none;
+  }
+  .lock-message.visible { display: block; }
+
+  /* --- Card di feedback: compare dopo N domande, sopra la barra di input.
+         Non bloccante: si può chiudere, rimandare 48h ("Non ora"/X) o
+         zittire per sempre ("Non chiedermelo più"). --- */
+  .feedback-card {
+    width: 100%;
+    max-width: 640px;
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .feedback-card.visible { opacity: 1; transform: translateY(0); }
+
+  .fb-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .fb-title { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--ink); }
+  .fb-close {
+    border: none; background: none; cursor: pointer;
+    font-family: var(--mono); font-size: 14px; color: var(--ink-soft);
+    padding: 2px 4px; line-height: 1;
+  }
+  .fb-close:hover { color: var(--warn); }
+
+  .fb-stars { display: flex; gap: 4px; margin: 10px 0; }
+  .fb-star {
+    border: none; background: none; cursor: pointer;
+    font-size: 24px; line-height: 1; padding: 0;
+    color: var(--rule); transition: color 0.12s ease;
+  }
+  .fb-star.filled { color: var(--gold); }
+
+  .fb-comment {
+    width: 100%;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 13.5px;
+    line-height: 1.4;
+    padding: 8px 10px;
+    resize: none;
+    outline: none;
+  }
+  .fb-comment:focus { border-color: var(--accent); }
+
+  .fb-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .fb-submit {
+    font-family: var(--mono); font-size: 12px;
+    background: var(--ink); color: var(--paper);
+    border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer;
+  }
+  .fb-submit:disabled { opacity: 0.4; cursor: default; }
+  .fb-secondary { display: flex; gap: 14px; }
+  .fb-link {
+    border: none; background: none; cursor: pointer;
+    font-family: var(--mono); font-size: 11px; color: var(--ink-soft);
+    text-decoration: underline dotted; padding: 0;
+  }
+  .fb-link:hover { color: var(--accent); }
+
+  .fb-done { font-family: var(--mono); font-size: 12.5px; color: var(--gold); padding: 6px 0 2px; }
+  .fb-error { font-family: var(--mono); font-size: 12px; color: var(--warn); padding: 6px 0 2px; }
+
+  .feedback-card[data-state="thanks"] .fb-stars,
+  .feedback-card[data-state="thanks"] .fb-comment,
+  .feedback-card[data-state="thanks"] .fb-actions { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feedback-card, .fb-star { transition: none; }
+  }
+
+  /* --- Schermata "cold start": mostrata al caricamento mentre il backend
+         (che su free tier va in sleep) si risveglia. --- */
+  .cold-start {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: var(--paper);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 92px 20px 0;
+    transition: opacity 0.45s ease;
+  }
+  .cold-start.done { opacity: 0; pointer-events: none; }
+
+  .cs-inner { width: 100%; max-width: 640px; }
+
+  .skeleton {
+    background: linear-gradient(90deg,
+      var(--skeleton) 25%, var(--skeleton-hi) 37%, var(--skeleton) 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+    border-radius: 3px;
+  }
+  @keyframes shimmer {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+  }
+
+  .sk-eyebrow { width: 110px; height: 12px; margin-bottom: 18px; }
+  .sk-title { width: 100%; height: 26px; margin-bottom: 12px; }
+  .sk-title.short { width: 58%; margin-bottom: 26px; }
+  .sk-text { width: 100%; height: 13px; margin-bottom: 9px; }
+  .sk-text.short { width: 42%; }
+  .cs-chips { display: flex; gap: 8px; margin-top: 26px; }
+  .sk-chip { width: 140px; height: 32px; }
+  .sk-chip:nth-child(2) { width: 180px; }
+  .sk-chip:nth-child(3) { width: 120px; }
+
+  .cs-status {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 40px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .cs-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+    animation: csPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes csPulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1); }
+  }
+
+  .cs-retry {
+    margin-top: 18px;
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 6px;
+    padding: 9px 16px;
+    cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton, .cs-dot { animation: none; }
+    .skeleton { background: var(--skeleton); }
+  }
+</style>
+</head>
+<body>
+
+<div class="cold-start" id="cold-start" role="status" aria-live="polite">
+  <div class="cs-inner">
+    <div class="skeleton sk-eyebrow"></div>
+    <div class="skeleton sk-title"></div>
+    <div class="skeleton sk-title short"></div>
+    <div class="skeleton sk-text"></div>
+    <div class="skeleton sk-text"></div>
+    <div class="skeleton sk-text short"></div>
+    <div class="cs-chips">
+      <div class="skeleton sk-chip"></div>
+      <div class="skeleton sk-chip"></div>
+      <div class="skeleton sk-chip"></div>
+    </div>
+    <div class="cs-status">
+      <span class="cs-dot"></span>
+      <span id="cs-message">😴 Sto svegliando il backend…</span>
+    </div>
+    <button type="button" class="cs-retry" id="cs-retry" hidden>Riprova</button>
+  </div>
+</div>
+
+<div class="bar">
+  <span class="name">Nome Cognome</span>
+  <div class="right">
+    <div class="lang-toggle" id="lang-toggle" role="group" aria-label="Lingua / Language">
+      <button type="button" class="lang-opt" data-lang="it">IT</button>
+      <button type="button" class="lang-opt" data-lang="en">EN</button>
+      <span class="lang-slider" aria-hidden="true"></span>
+    </div>
+    <label class="debug-toggle">
+      <input type="checkbox" id="debug-toggle">
+      <span>ispeziona query vettoriale</span>
+    </label>
+    <button class="admin-link" id="admin-link" type="button">modalità sviluppatore</button>
+    <span class="admin-badge" id="admin-badge" style="display:none;">🔓 dev mode attiva</span>
+  </div>
+</div>
+
+<main>
+  <div class="intro">
+    <div class="eyebrow">Progetto 3 — RAG</div>
+    <h1>Fammi domande sul mio percorso, sui miei progetti e sullo stack che uso.</h1>
+    <p>Le risposte sono generate recuperando informazioni reali dal mio CV e dai
+       README dei progetti (Retrieval-Augmented Generation) — non sono a caso.</p>
+    <div class="suggestions">
+      <button class="chip" type="button">Quali design pattern hai usato nel backend?</button>
+      <button class="chip" type="button">Perché hai scelto PostgreSQL con pgvector?</button>
+      <button class="chip" type="button">Parlami della tua tesi o del tuo progetto gestionale.</button>
+    </div>
+    <button class="summary-btn" id="summary-btn" type="button">Genera riassunto del profilo</button>
+  </div>
+
+  <div id="log"></div>
+</main>
+
+<form id="chat-form">
+  <div class="feedback-card" id="feedback-card" role="dialog" aria-labelledby="fb-title" hidden>
+    <div class="fb-head">
+      <span class="fb-title" id="fb-title">Com'è stata la tua esperienza?</span>
+      <button type="button" class="fb-close" id="fb-close" aria-label="Chiudi">✕</button>
+    </div>
+    <div class="fb-stars" id="fb-stars" role="radiogroup" aria-label="Valutazione">
+      <button type="button" class="fb-star" data-value="1" role="radio" aria-checked="false" aria-label="1">★</button>
+      <button type="button" class="fb-star" data-value="2" role="radio" aria-checked="false" aria-label="2">★</button>
+      <button type="button" class="fb-star" data-value="3" role="radio" aria-checked="false" aria-label="3">★</button>
+      <button type="button" class="fb-star" data-value="4" role="radio" aria-checked="false" aria-label="4">★</button>
+      <button type="button" class="fb-star" data-value="5" role="radio" aria-checked="false" aria-label="5">★</button>
+    </div>
+    <textarea class="fb-comment" id="fb-comment" rows="2" maxlength="1000"
+              placeholder="Opzionale: dicci come possiamo migliorare il servizio"></textarea>
+    <div class="fb-actions">
+      <button type="button" class="fb-submit" id="fb-submit" disabled>Inoltra</button>
+      <div class="fb-secondary">
+        <button type="button" class="fb-link" id="fb-not-now">Non ora</button>
+        <button type="button" class="fb-link" id="fb-never">Non chiedermelo più</button>
+      </div>
+    </div>
+    <div class="fb-done" id="fb-done" hidden>Grazie per il feedback!</div>
+    <div class="fb-error" id="fb-error" hidden>Non è stato possibile inviare il feedback. Riprova più tardi.</div>
+  </div>
+  <div class="input-row" id="input-row">
+    <textarea id="input" rows="1" placeholder="Scrivi una domanda... (Invio per inviare, Shift+Invio per andare a capo)" maxlength="300" required></textarea>
+    <button type="submit" id="send-btn">Invia</button>
+  </div>
+  <div class="status-bar">
+    <span class="char-counter" id="char-counter">0/300</span>
+    <span class="rate-counter" id="rate-counter"></span>
+  </div>
+  <div class="lock-message" id="lock-message"></div>
+</form>
+
+<script>
+  const API_BASE = "http://localhost:8080"; // in produzione, sostituisci con l'URL pubblico del backend
+  const API_CHAT_URL = API_BASE + "/api/chat";
+  const API_STATUS_URL = API_BASE + "/api/chat/status";
+  const API_ADMIN_LOGIN_URL = API_BASE + "/api/admin/login";
+  const API_FEEDBACK_URL = API_BASE + "/api/feedback";
+  const API_SUMMARY_URL = API_BASE + "/api/summary";
+
+  const MAX_CHARS = 300;
+  // Dopo quante domande completate proporre la card di feedback (conteggio
+  // cumulativo per browser, persistito in localStorage). Cambia anche il
+  // commento nella ROADMAP se lo modifichi.
+  const FEEDBACK_AFTER_INTERACTIONS = 3;
+  const FEEDBACK_SNOOZE_MS = 48 * 60 * 60 * 1000; // "Non ora" / X → 48h di pausa
+  const PER_MINUTE_LIMIT = 3; // deve combaciare con rag.rate-limit.per-minute in application.yml
+  const PER_DAY_LIMIT = 10;   // deve combaciare con rag.rate-limit.per-day in application.yml
+
+  let remainingMinute = PER_MINUTE_LIMIT;
+  let remainingDay = PER_DAY_LIMIT;
+  let minuteResetEpochMs = null;
+  let dayResetEpochMs = null;
+  let isAdmin = false;
+  let minuteIntervalId = null;
+  let summaryDone = false; // scheda "Genera Riassunto" già mostrata in questa pageview
+
+  const log = document.getElementById('log');
+  const form = document.getElementById('chat-form');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('send-btn');
+  const debugToggle = document.getElementById('debug-toggle');
+  const charCounter = document.getElementById('char-counter');
+  const rateCounter = document.getElementById('rate-counter');
+  const inputRow = document.getElementById('input-row');
+  const lockMessage = document.getElementById('lock-message');
+  const chips = document.querySelectorAll('.chip');
+  const adminLink = document.getElementById('admin-link');
+  const adminBadge = document.getElementById('admin-badge');
+  const langToggle = document.getElementById('lang-toggle');
+  const summaryBtn = document.getElementById('summary-btn');
+
+  // --- i18n: il toggle IT/EN cambia SOLO i testi dell'interfaccia. La scelta
+  //     è salvata in localStorage e applicata al load (con reload al cambio),
+  //     così titolo, chip e label compaiono già nella lingua giusta. La lingua
+  //     della risposta dell'LLM resta quella della domanda (regola nel system
+  //     prompt lato backend, non toccata qui). ---
+  const STRINGS = {
+    it: {
+      htmlLang: 'it',
+      title: 'Chiedimi qualcosa — Chatbot RAG',
+      debugToggle: 'ispeziona query vettoriale',
+      adminLink: 'modalità sviluppatore',
+      adminBadge: '🔓 dev mode attiva',
+      eyebrow: 'Progetto 3 — RAG',
+      h1: 'Fammi domande sul mio percorso, sui miei progetti e sullo stack che uso.',
+      introP: 'Le risposte sono generate recuperando informazioni reali dal mio CV e dai README dei progetti (Retrieval-Augmented Generation) — non sono a caso.',
+      chips: [
+        'Quali design pattern hai usato nel backend?',
+        'Perché hai scelto PostgreSQL con pgvector?',
+        'Parlami della tua tesi o del tuo progetto gestionale.'
+      ],
+      inputPlaceholder: 'Scrivi una domanda... (Invio per inviare, Shift+Invio per andare a capo)',
+      sendBtn: 'Invia',
+      labelUser: 'tu',
+      labelBot: 'assistente',
+      sources: (n) => 'fonte (' + n + ')',
+      similarity: (s) => 'similarità ' + s,
+      debugEmbedding: 'embedding',
+      debugGeneration: 'generazione',
+      debugTopK: 'top-k',
+      debugRetrieval: 'retrieval',
+      adminUnlimited: '🔓 modalità sviluppatore — richieste illimitate',
+      ratePerMinute: (rem, lim, clock) => clock
+        ? rem + '/' + lim + ' richieste al minuto (' + clock + ')'
+        : rem + '/' + lim + ' richieste al minuto',
+      rateDay: (rem, lim) => ' · ' + rem + '/' + lim + ' oggi',
+      lockDay: (when) => 'Limite giornaliero raggiunto — sbloccherai nuove richieste il ' + when + '.',
+      lockMinute: (mmss) => 'Limite richieste al minuto raggiunto — puoi inviare una nuova richiesta tra ' + mmss + '.',
+      dateAt: 'alle',
+      coldStart: [
+        '😴 Sto svegliando il backend…',
+        '☕ Il server era in pausa — un momento…',
+        '🛠️ Ci siamo quasi, ancora qualche secondo…',
+        '⏳ Sta impiegando più del previsto, ma continuo a provare…'
+      ],
+      coldStartFail: '⚠️ Non riesco a contattare il backend. Verifica che sia avviato e riprova.',
+      retry: 'Riprova',
+      adminPrompt: 'Password modalità sviluppatore:',
+      adminOk: 'Modalità sviluppatore attiva per 12 ore.',
+      adminBad: 'Password non valida.',
+      adminErr: 'Errore nel contattare il backend.',
+      errInvalid: 'Richiesta non valida.',
+      errBackend: 'Errore nel contattare il backend. Riprova tra poco.',
+      fbTitle: "Com'è stata la tua esperienza?",
+      fbClose: 'Chiudi',
+      fbRatingAria: 'Valutazione',
+      fbStarAria: (n) => n === '1' ? '1 stella' : n + ' stelle',
+      fbCommentPlaceholder: 'Opzionale: dicci come possiamo migliorare il servizio',
+      fbSubmit: 'Inoltra',
+      fbNotNow: 'Non ora',
+      fbNever: 'Non chiedermelo più',
+      fbThanks: 'Grazie per il feedback!',
+      fbError: 'Non è stato possibile inviare il feedback. Riprova più tardi.',
+      summaryBtn: 'Genera riassunto del profilo',
+      summaryLabel: 'riassunto',
+      summaryPending: 'Sto componendo il riassunto…',
+      summaryError: 'Non è stato possibile generare il riassunto. Riprova tra poco.',
+      summaryHeadings: {
+        inBreve: 'In breve',
+        formazione: 'Formazione',
+        puntiDiForza: 'Punti di forza',
+        doveStaCrescendo: 'Dove sto crescendo',
+        progetti: 'Progetti',
+        stack: 'Stack',
+        logistica: 'Logistica',
+        contatto: 'Contatto'
+      }
+    },
+    en: {
+      htmlLang: 'en',
+      title: 'Ask me anything — RAG Chatbot',
+      debugToggle: 'inspect vector query',
+      adminLink: 'developer mode',
+      adminBadge: '🔓 dev mode on',
+      eyebrow: 'Project 3 — RAG',
+      h1: 'Ask me about my background, my projects and the stack I work with.',
+      introP: 'Answers are generated by retrieving real information from my CV and the project READMEs (Retrieval-Augmented Generation) — they are not made up.',
+      chips: [
+        'Which design patterns did you use in the backend?',
+        'Why did you choose PostgreSQL with pgvector?',
+        'Tell me about your thesis or your management-simulation project.'
+      ],
+      inputPlaceholder: 'Type a question... (Enter to send, Shift+Enter for a new line)',
+      sendBtn: 'Send',
+      labelUser: 'you',
+      labelBot: 'assistant',
+      sources: (n) => 'source (' + n + ')',
+      similarity: (s) => 'similarity ' + s,
+      debugEmbedding: 'embedding',
+      debugGeneration: 'generation',
+      debugTopK: 'top-k',
+      debugRetrieval: 'retrieval',
+      adminUnlimited: '🔓 developer mode — unlimited requests',
+      ratePerMinute: (rem, lim, clock) => clock
+        ? rem + '/' + lim + ' requests per minute (' + clock + ')'
+        : rem + '/' + lim + ' requests per minute',
+      rateDay: (rem, lim) => ' · ' + rem + '/' + lim + ' today',
+      lockDay: (when) => "Daily limit reached — you'll be able to send new requests on " + when + '.',
+      lockMinute: (mmss) => 'Per-minute request limit reached — you can send a new request in ' + mmss + '.',
+      dateAt: 'at',
+      coldStart: [
+        '😴 Waking up the backend…',
+        '☕ The server was asleep — one moment…',
+        '🛠️ Almost there, a few more seconds…',
+        '⏳ Taking longer than expected, but still trying…'
+      ],
+      coldStartFail: "⚠️ Can't reach the backend. Make sure it's running and try again.",
+      retry: 'Retry',
+      adminPrompt: 'Developer mode password:',
+      adminOk: 'Developer mode active for 12 hours.',
+      adminBad: 'Invalid password.',
+      adminErr: 'Error contacting the backend.',
+      errInvalid: 'Invalid request.',
+      errBackend: 'Error contacting the backend. Try again shortly.',
+      fbTitle: 'How was your experience?',
+      fbClose: 'Close',
+      fbRatingAria: 'Rating',
+      fbStarAria: (n) => n === '1' ? '1 star' : n + ' stars',
+      fbCommentPlaceholder: 'Optional: tell us how we can improve the service',
+      fbSubmit: 'Submit',
+      fbNotNow: 'Not now',
+      fbNever: "Don't ask again",
+      fbThanks: 'Thanks for your feedback!',
+      fbError: "Couldn't send your feedback. Please try again later.",
+      summaryBtn: 'Generate profile summary',
+      summaryLabel: 'summary',
+      summaryPending: 'Putting the summary together…',
+      summaryError: "Couldn't generate the summary. Please try again shortly.",
+      summaryHeadings: {
+        inBreve: 'At a glance',
+        formazione: 'Education',
+        puntiDiForza: 'Strengths',
+        doveStaCrescendo: "Where I'm growing",
+        progetti: 'Projects',
+        stack: 'Stack',
+        logistica: 'Logistics',
+        contatto: 'Contact'
+      }
+    }
+  };
+
+  const LANG = (() => {
+    try {
+      const saved = localStorage.getItem('lang');
+      if (saved === 'it' || saved === 'en') return saved;
+    } catch (_) { /* localStorage non disponibile: si usa il default */ }
+    return 'it';
+  })();
+  const t = STRINGS[LANG];
+
+  function applyLanguage() {
+    document.documentElement.lang = t.htmlLang;
+    document.title = t.title;
+    document.querySelector('.debug-toggle span').textContent = t.debugToggle;
+    adminLink.textContent = t.adminLink;
+    adminBadge.textContent = t.adminBadge;
+    document.querySelector('.intro .eyebrow').textContent = t.eyebrow;
+    document.querySelector('.intro h1').textContent = t.h1;
+    document.querySelector('.intro p').textContent = t.introP;
+    chips.forEach((chip, i) => { if (t.chips[i]) chip.textContent = t.chips[i]; });
+    input.placeholder = t.inputPlaceholder;
+    sendBtn.textContent = t.sendBtn;
+    document.getElementById('cs-message').textContent = t.coldStart[0];
+    document.getElementById('cs-retry').textContent = t.retry;
+
+    document.getElementById('fb-title').textContent = t.fbTitle;
+    document.getElementById('fb-close').setAttribute('aria-label', t.fbClose);
+    document.getElementById('fb-stars').setAttribute('aria-label', t.fbRatingAria);
+    document.querySelectorAll('.fb-star').forEach(s => s.setAttribute('aria-label', t.fbStarAria(s.dataset.value)));
+    document.getElementById('fb-comment').placeholder = t.fbCommentPlaceholder;
+    document.getElementById('fb-submit').textContent = t.fbSubmit;
+    document.getElementById('fb-not-now').textContent = t.fbNotNow;
+    document.getElementById('fb-never').textContent = t.fbNever;
+    document.getElementById('fb-done').textContent = t.fbThanks;
+    document.getElementById('fb-error').textContent = t.fbError;
+
+    summaryBtn.textContent = t.summaryBtn;
+  }
+
+  langToggle.dataset.active = LANG;
+  langToggle.querySelectorAll('.lang-opt').forEach(opt => {
+    opt.classList.toggle('active', opt.dataset.lang === LANG);
+    opt.addEventListener('click', () => {
+      if (opt.dataset.lang === LANG) return;
+      try { localStorage.setItem('lang', opt.dataset.lang); } catch (_) { /* ignora */ }
+      location.reload();
+    });
+  });
+
+  applyLanguage();
+
+  // --- Textarea che cresce e va a capo, invio con Enter, nuova riga con Shift+Enter ---
+  function autoResizeInput() {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  }
+  input.addEventListener('input', () => {
+    updateCharCounter();
+    autoResizeInput();
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  function updateCharCounter() {
+    const len = input.value.length;
+    charCounter.textContent = len + "/" + MAX_CHARS;
+    charCounter.classList.toggle('warn', len >= MAX_CHARS * 0.85 && len < MAX_CHARS);
+    charCounter.classList.toggle('limit', len >= MAX_CHARS);
+  }
+
+  function formatMMSS(totalSeconds) {
+    const s = Math.max(0, totalSeconds);
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return m + ":" + String(sec).padStart(2, '0');
+  }
+
+  function formatClock(epochMs) {
+    const d = new Date(epochMs);
+    return String(d.getHours()).padStart(2, '0') + ":" + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  // Come formatClock ma con anche il giorno: "DD/MM alle HH:MM".
+  // Serve per il limite giornaliero, dove "alle 00:02" da solo non fa capire QUANDO.
+  function formatDateTime(epochMs) {
+    const d = new Date(epochMs);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return day + "/" + month + " " + t.dateAt + " " + formatClock(epochMs);
+  }
+
+  function secondsUntil(epochMs) {
+    return Math.max(0, Math.round((epochMs - Date.now()) / 1000));
+  }
+
+  function renderRateCounter() {
+    if (isAdmin) {
+      rateCounter.textContent = t.adminUnlimited;
+      rateCounter.classList.add('admin');
+      rateCounter.classList.remove('limit');
+      return;
+    }
+    const clock = minuteResetEpochMs ? formatMMSS(secondsUntil(minuteResetEpochMs)) : null;
+    const minutePart = t.ratePerMinute(remainingMinute, PER_MINUTE_LIMIT, clock);
+    const dayPart = t.rateDay(remainingDay, PER_DAY_LIMIT);
+    rateCounter.textContent = minutePart + dayPart;
+    rateCounter.classList.toggle('limit', remainingMinute === 0 || remainingDay === 0);
+  }
+
+  function refreshLockAndCountdown() {
+    clearInterval(minuteIntervalId);
+    if (isAdmin) {
+      unlockInput();
+      renderRateCounter();
+      return;
+    }
+
+    if (remainingDay === 0 && dayResetEpochMs) {
+      lockInput(t.lockDay(formatDateTime(dayResetEpochMs)));
+      renderRateCounter();
+      return;
+    }
+
+    if (remainingMinute === 0 && minuteResetEpochMs) {
+      const tick = () => {
+        const left = secondsUntil(minuteResetEpochMs);
+        lockMessage.textContent = t.lockMinute(formatMMSS(left));
+        renderRateCounter();
+        if (left <= 0) {
+          clearInterval(minuteIntervalId);
+          remainingMinute = PER_MINUTE_LIMIT;
+          minuteResetEpochMs = null;
+          unlockInput();
+          renderRateCounter();
+        }
+      };
+      lockInput('');
+      tick();
+      minuteIntervalId = setInterval(tick, 1000);
+      return;
+    }
+
+    // Non bloccato, ma se c'è una finestra minuto attiva continua ad aggiornarne il countdown a video
+    if (minuteResetEpochMs) {
+      minuteIntervalId = setInterval(() => {
+        if (secondsUntil(minuteResetEpochMs) <= 0) {
+          clearInterval(minuteIntervalId);
+          minuteResetEpochMs = null;
+        }
+        renderRateCounter();
+      }, 1000);
+    }
+
+    unlockInput();
+    renderRateCounter();
+  }
+
+  function lockInput(message) {
+    input.disabled = true;
+    sendBtn.disabled = true;
+    inputRow.classList.add('locked');
+    chips.forEach(c => c.disabled = true);
+    summaryBtn.disabled = true;
+    if (message) {
+      lockMessage.textContent = message;
+      lockMessage.classList.add('visible');
+    }
+  }
+
+  function unlockInput() {
+    input.disabled = false;
+    sendBtn.disabled = false;
+    inputRow.classList.remove('locked');
+    chips.forEach(c => c.disabled = false);
+    if (!summaryDone) summaryBtn.disabled = false;
+    lockMessage.classList.remove('visible');
+  }
+
+  function applyHeaders(headers) {
+    isAdmin = headers.get('X-Admin-Bypass') === 'true';
+    const min = headers.get('X-RateLimit-Remaining-Minute');
+    const day = headers.get('X-RateLimit-Remaining-Day');
+    const minuteReset = headers.get('X-RateLimit-Reset-Minute');
+    const dayReset = headers.get('X-RateLimit-Reset-Day');
+
+    if (min !== null) remainingMinute = parseInt(min, 10);
+    if (day !== null) remainingDay = parseInt(day, 10);
+    minuteResetEpochMs = minuteReset !== null ? parseInt(minuteReset, 10) : null;
+    dayResetEpochMs = dayReset !== null ? parseInt(dayReset, 10) : null;
+
+    if (isAdmin) {
+      adminBadge.style.display = 'inline';
+      adminLink.style.display = 'none';
+    }
+
+    refreshLockAndCountdown();
+  }
+
+  // --- Controllo preliminare all'apertura della pagina: se sei già bloccato
+  //     (es. dopo un reload), lo mostriamo subito senza dover inviare nulla ---
+  async function checkStatusOnLoad() {
+    try {
+      const res = await fetch(API_STATUS_URL, { method: 'GET', credentials: 'include' });
+      applyHeaders(res.headers);
+    } catch (err) {
+      console.error('Impossibile controllare lo stato del rate limit:', err);
+    }
+  }
+
+  // --- Cold start: su hosting free tier il backend si addormenta dopo
+  //     qualche minuto di inattività e la prima richiesta può metterci
+  //     30-60s a svegliarlo. Invece di mostrare una pagina "rotta",
+  //     teniamo uno skeleton animato e ritentiamo /status finché risponde. ---
+  async function wakeBackend() {
+    const overlay = document.getElementById('cold-start');
+    const msgEl = document.getElementById('cs-message');
+    const retryBtn = document.getElementById('cs-retry');
+    const startedAt = Date.now();
+    const DEADLINE_MS = 90000;
+
+    const MESSAGES = [
+      [0,     t.coldStart[0]],
+      [8000,  t.coldStart[1]],
+      [22000, t.coldStart[2]],
+      [45000, t.coldStart[3]],
+    ];
+    const msgTimer = setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      let text = MESSAGES[0][1];
+      for (const [t, m] of MESSAGES) if (elapsed >= t) text = m;
+      msgEl.textContent = text;
+    }, 1000);
+
+    let ready = false;
+    while (Date.now() - startedAt < DEADLINE_MS) {
+      try {
+        const ctrl = new AbortController();
+        const abortTimer = setTimeout(() => ctrl.abort(), 12000);
+        const res = await fetch(API_STATUS_URL, { method: 'GET', credentials: 'include', signal: ctrl.signal });
+        clearTimeout(abortTimer);
+        if (res.ok) { applyHeaders(res.headers); ready = true; break; }
+      } catch (_) {
+        // backend ancora giù o richiesta annullata: si ritenta
+      }
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    clearInterval(msgTimer);
+
+    if (ready) {
+      // minimo di permanenza per non far "sfarfallare" lo skeleton se il
+      // backend era già caldo e ha risposto in pochi ms
+      const shownFor = Date.now() - startedAt;
+      if (shownFor < 450) await new Promise(r => setTimeout(r, 450 - shownFor));
+      overlay.classList.add('done');
+      setTimeout(() => { overlay.style.display = 'none'; }, 500);
+      if (!input.disabled) input.focus();
+    } else {
+      msgEl.textContent = t.coldStartFail;
+      retryBtn.hidden = false;
+    }
+  }
+
+  document.getElementById('cs-retry').addEventListener('click', () => {
+    document.getElementById('cs-retry').hidden = true;
+    wakeBackend();
+  });
+
+  // --- Modalità sviluppatore ---
+  adminLink.addEventListener('click', async () => {
+    const password = window.prompt(t.adminPrompt);
+    if (!password) return;
+    try {
+      const res = await fetch(API_ADMIN_LOGIN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password })
+      });
+      if (res.ok) {
+        await checkStatusOnLoad();
+        alert(t.adminOk);
+      } else {
+        alert(t.adminBad);
+      }
+    } catch (err) {
+      alert(t.adminErr);
+      console.error(err);
+    }
+  });
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      if (chip.disabled) return;
+      input.value = chip.textContent;
+      updateCharCounter();
+      autoResizeInput();
+      form.requestSubmit();
+    });
+  });
+
+  function addUserMessage(text) {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg user';
+    wrap.innerHTML = `<div class="label"></div><div class="bubble"></div>`;
+    wrap.querySelector('.label').textContent = t.labelUser;
+    wrap.querySelector('.bubble').textContent = text;
+    log.appendChild(wrap);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
+
+  function addBotAnswer(data) {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg bot';
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = t.labelBot;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = data.answer;
+
+    wrap.appendChild(label);
+    wrap.appendChild(bubble);
+
+    if (data.sources && data.sources.length > 0) {
+      const details = document.createElement('details');
+      details.className = 'meta';
+      const summary = document.createElement('summary');
+      summary.textContent = t.sources(data.sources.length);
+      details.appendChild(summary);
+
+      data.sources.forEach(s => {
+        const item = document.createElement('div');
+        item.className = 'source-item';
+        item.innerHTML = `<div class="src-name">${s.source}<span class="sim">${t.similarity(s.similarity)}</span></div>${s.snippet}`;
+        details.appendChild(item);
+      });
+      wrap.appendChild(details);
+    }
+
+    if (debugToggle.checked && data.debug) {
+      const panel = document.createElement('div');
+      panel.className = 'debug-panel';
+      panel.innerHTML = `
+        <span>${t.debugEmbedding}: ${data.debug.embeddingModel}</span>
+        <span>${t.debugGeneration}: ${data.debug.generationModel}</span>
+        <span>${t.debugTopK}: ${data.debug.topK}</span>
+        <span>${t.debugRetrieval}: ${data.debug.retrievalTimeMs}ms</span>
+        <span>${t.debugGeneration}: ${data.debug.generationTimeMs}ms</span>
+      `;
+      wrap.appendChild(panel);
+    }
+
+    log.appendChild(wrap);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
+
+  function addErrorMessage(text) {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg bot';
+    wrap.innerHTML = `<div class="label"></div><div class="bubble error-note"></div>`;
+    wrap.querySelector('.label').textContent = t.labelBot;
+    wrap.querySelector('.bubble').textContent = text;
+    log.appendChild(wrap);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+
+    addUserMessage(question);
+    input.value = '';
+    updateCharCounter();
+    autoResizeInput();
+    sendBtn.disabled = true;
+
+    const pending = document.createElement('div');
+    pending.className = 'msg bot pending';
+    pending.innerHTML = '<div class="label"></div><div class="bubble"><span class="cursor"></span></div>';
+    pending.querySelector('.label').textContent = t.labelBot;
+    log.appendChild(pending);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+    try {
+      const res = await fetch(API_CHAT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: question })
+      });
+
+      applyHeaders(res.headers);
+
+      const data = await res.json();
+      pending.remove();
+
+      if (!res.ok) {
+        addErrorMessage(data.error || t.errInvalid);
+      } else {
+        addBotAnswer(data);
+        recordInteractionAndMaybePrompt();
+      }
+    } catch (err) {
+      pending.remove();
+      addErrorMessage(t.errBackend);
+      console.error(err);
+    } finally {
+      if (!inputRow.classList.contains('locked')) {
+        sendBtn.disabled = false;
+      }
+    }
+  });
+
+  // --- Card di feedback ---------------------------------------------------
+  // Stato in localStorage:
+  //   fb_interactions : quante domande completate ha fatto questo browser
+  //   fb_state        : 'snoozed' | 'done' | 'never'  (assente = da proporre)
+  //   fb_snooze_until  : epoch ms fino a cui NON riproporre (per 'snoozed')
+  // Tutta la logica di "quando" vive qui: il backend registra e basta.
+  const feedbackCard = document.getElementById('feedback-card');
+  const fbStars = document.getElementById('fb-stars');
+  const fbComment = document.getElementById('fb-comment');
+  const fbSubmit = document.getElementById('fb-submit');
+  const fbClose = document.getElementById('fb-close');
+  const fbNotNow = document.getElementById('fb-not-now');
+  const fbNever = document.getElementById('fb-never');
+  const fbDone = document.getElementById('fb-done');
+  const fbError = document.getElementById('fb-error');
+
+  let feedbackRating = 0;
+  let feedbackShownThisView = false;
+
+  function fbGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
+  function fbSet(k, v) { try { localStorage.setItem(k, v); } catch (_) { /* ignora */ } }
+
+  function feedbackInteractions() {
+    return parseInt(fbGet('fb_interactions') || '0', 10) || 0;
+  }
+
+  function recordInteractionAndMaybePrompt() {
+    const n = feedbackInteractions() + 1;
+    fbSet('fb_interactions', String(n));
+    if (feedbackShownThisView) return;
+
+    const state = fbGet('fb_state');
+    if (state === 'done' || state === 'never') return;
+    if (state === 'snoozed') {
+      const until = parseInt(fbGet('fb_snooze_until') || '0', 10);
+      if (Date.now() < until) return;
+    }
+    if (n < FEEDBACK_AFTER_INTERACTIONS) return;
+
+    showFeedbackCard();
+  }
+
+  function showFeedbackCard() {
+    feedbackShownThisView = true;
+    fbError.hidden = true;
+    feedbackCard.hidden = false;
+    void feedbackCard.offsetWidth; // forza un reflow: così la transizione parte dallo stato "nascosto"
+    feedbackCard.classList.add('visible');
+  }
+
+  function hideFeedbackCard() {
+    feedbackCard.classList.remove('visible');
+    setTimeout(() => { feedbackCard.hidden = true; }, 250);
+  }
+
+  function snoozeFeedback() {
+    fbSet('fb_state', 'snoozed');
+    fbSet('fb_snooze_until', String(Date.now() + FEEDBACK_SNOOZE_MS));
+    hideFeedbackCard();
+  }
+
+  function paintStars(upTo) {
+    fbStars.querySelectorAll('.fb-star').forEach(star => {
+      const v = parseInt(star.dataset.value, 10);
+      star.classList.toggle('filled', v <= upTo);
+      star.setAttribute('aria-checked', String(v === feedbackRating));
+    });
+  }
+
+  fbStars.querySelectorAll('.fb-star').forEach(star => {
+    const v = parseInt(star.dataset.value, 10);
+    star.addEventListener('click', () => {
+      feedbackRating = v;
+      paintStars(v);
+      fbSubmit.disabled = false;
+      fbError.hidden = true;
+    });
+    star.addEventListener('mouseenter', () => paintStars(v));
+  });
+  fbStars.addEventListener('mouseleave', () => paintStars(feedbackRating));
+
+  fbClose.addEventListener('click', snoozeFeedback);
+  fbNotNow.addEventListener('click', snoozeFeedback);
+  fbNever.addEventListener('click', () => {
+    fbSet('fb_state', 'never');
+    hideFeedbackCard();
+  });
+
+  fbSubmit.addEventListener('click', async () => {
+    if (feedbackRating < 1) return;
+    fbSubmit.disabled = true;
+    fbError.hidden = true;
+    try {
+      const res = await fetch(API_FEEDBACK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          rating: feedbackRating,
+          comment: fbComment.value.trim() || null,
+          lang: LANG,
+          interactions: feedbackInteractions()
+        })
+      });
+      // 429 = il backend ha già abbastanza feedback da questo IP di recente:
+      // per l'utente non c'è niente da correggere, chiudiamo con un grazie e
+      // non riproponiamo più la card.
+      if (res.ok || res.status === 429) {
+        fbSet('fb_state', 'done');
+        feedbackCard.dataset.state = 'thanks';
+        fbDone.hidden = false;
+        setTimeout(hideFeedbackCard, 1900);
+      } else {
+        fbError.hidden = false;
+        fbSubmit.disabled = false;
+      }
+    } catch (err) {
+      console.error('Invio feedback fallito:', err);
+      fbError.hidden = false;
+      fbSubmit.disabled = false;
+    }
+  });
+
+  // --- "Genera Riassunto" ------------------------------------------------
+  // Il pulsante chiede al backend la scheda di sintesi (sezioni statiche
+  // curate + formazione/progetti/stack generate dall'LLM sulla KB, con
+  // cache lato server) e la inserisce nella chat come pannello strutturato.
+  function renderSummary(data) {
+    const h = t.summaryHeadings;
+    const wrap = document.createElement('div');
+    wrap.className = 'msg bot summary';
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = t.summaryLabel;
+    wrap.appendChild(label);
+
+    const body = document.createElement('div');
+    body.className = 'summary-body';
+
+    const addText = (heading, text) => {
+      if (!text) return;
+      const s = document.createElement('section');
+      const hd = document.createElement('h4');
+      hd.textContent = heading;
+      const p = document.createElement('p');
+      p.textContent = text;
+      s.appendChild(hd);
+      s.appendChild(p);
+      body.appendChild(s);
+    };
+    const addItems = (heading, items, nameKey, textKey) => {
+      if (!Array.isArray(items) || items.length === 0) return;
+      const s = document.createElement('section');
+      const hd = document.createElement('h4');
+      hd.textContent = heading;
+      s.appendChild(hd);
+      items.forEach(it => {
+        const d = document.createElement('div');
+        d.className = 'summary-item';
+        const strong = document.createElement('strong');
+        strong.textContent = it[nameKey] || '';
+        const p = document.createElement('p');
+        p.textContent = it[textKey] || '';
+        d.appendChild(strong);
+        d.appendChild(p);
+        s.appendChild(d);
+      });
+      body.appendChild(s);
+    };
+
+    addText(h.inBreve, data.inBreve);
+    addText(h.formazione, data.formazione);
+    addItems(h.puntiDiForza, data.puntiDiForza, 'titolo', 'testo');
+    addItems(h.doveStaCrescendo, data.doveStaCrescendo, 'titolo', 'testo');
+    addItems(h.progetti, data.progetti, 'nome', 'descrizione');
+    addText(h.stack, data.stack);
+    addText(h.logistica, data.logistica);
+    addText(h.contatto, data.contatto);
+
+    wrap.appendChild(body);
+    log.appendChild(wrap);
+    // Nessuno scroll automatico: la pagina resta dov'è e il recruiter scorre
+    // a leggere la scheda (che compare subito sotto, ancora in vista).
+  }
+
+  summaryBtn.addEventListener('click', async () => {
+    if (summaryDone || summaryBtn.disabled) return;
+    summaryBtn.disabled = true;
+
+    const pending = document.createElement('div');
+    pending.className = 'msg bot pending';
+    pending.innerHTML = '<div class="label"></div><div class="bubble"></div>';
+    pending.querySelector('.label').textContent = t.summaryLabel;
+    const b = pending.querySelector('.bubble');
+    b.textContent = t.summaryPending + ' ';
+    b.appendChild(Object.assign(document.createElement('span'), { className: 'cursor' }));
+    log.appendChild(pending);
+    // niente scroll: l'indicatore compare subito sotto il pulsante, già in vista
+
+    try {
+      const res = await fetch(API_SUMMARY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ lang: LANG })
+      });
+      pending.remove();
+
+      if (!res.ok) {
+        addErrorMessage(t.summaryError);
+        summaryBtn.disabled = false;
+        return;
+      }
+
+      renderSummary(await res.json());
+      summaryDone = true;
+      summaryBtn.style.display = 'none';
+      recordInteractionAndMaybePrompt();
+    } catch (err) {
+      pending.remove();
+      addErrorMessage(t.summaryError);
+      summaryBtn.disabled = false;
+      console.error('Generazione riassunto fallita:', err);
+    }
+  });
+
+  updateCharCounter();
+  wakeBackend();
+</script>
+
+</body>
+</html>

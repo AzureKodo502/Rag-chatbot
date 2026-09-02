@@ -7,8 +7,10 @@ server:
 
 spring:
   datasource:
-    # DB_SSLMODE: "disable" in locale, "require" su Postgres gestiti (Neon/Supabase)
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ragchatbot}?sslmode=${DB_SSLMODE:disable}
+    # DB_SSLMODE: "disable" in locale, "require" su Postgres gestiti (Neon/Supabase).
+    # DB_EXTRA_PARAMS: parametri JDBC extra da appendere, es. "&channelBinding=require"
+    # o "&prepareThreshold=0" se si è costretti a usare un pooler PgBouncer.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ragchatbot}?sslmode=${DB_SSLMODE:disable}${DB_EXTRA_PARAMS:}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
     hikari:

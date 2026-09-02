@@ -11,8 +11,9 @@ CREATE TABLE IF NOT EXISTS document_chunks (
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- Indice per la ricerca per similarità (coseno). Va ricreato/ottimizzato
--- quando la tabella cresce parecchio.
-CREATE INDEX IF NOT EXISTS document_chunks_embedding_idx
-    ON document_chunks USING ivfflat (embedding vector_cosine_ops)
-    WITH (lists = 100);
+-- Niente indice ANN (ivfflat/hnsw) di proposito: la knowledge base è piccola
+-- (~30 chunk). Un indice ivfflat tarato per grandi dataset, su poche righe,
+-- produce ricerche approssimate che possono restituire risultati vuoti. Con
+-- questi volumi una scansione sequenziale è già istantanea e sempre esatta.
+-- Aggiungere un indice (e sceglierne i parametri) solo se la tabella cresce
+-- di ordini di grandezza.

@@ -635,6 +635,7 @@
   const API_ADMIN_LOGIN_URL = API_BASE + "/api/admin/login";
   const API_FEEDBACK_URL = API_BASE + "/api/feedback";
   const API_SUMMARY_URL = API_BASE + "/api/summary";
+  const API_HEALTH_URL = API_BASE + "/api/health";
 
   const MAX_CHARS = 300;
   // Dopo quante domande completate proporre la card di feedback (conteggio
@@ -1074,8 +1075,21 @@
     clearInterval(msgTimer);
 
     if (ready) {
-      // minimo di permanenza per non far "sfarfallare" lo skeleton se il
-      // backend era già caldo e ha risposto in pochi ms
+      // Render risponde, ma il DB (Neon, free tier scale-to-zero dopo 5 min)
+      // può essere ancora freddo: svegliamolo ADESSO con /api/health, così la
+      // prima domanda del visitatore non paga i ~15s del cold start di Neon.
+      msgEl.textContent = t.coldStart[2];
+      try {
+        const ctrl = new AbortController();
+        const abortTimer = setTimeout(() => ctrl.abort(), 15000);
+        await fetch(API_HEALTH_URL, { signal: ctrl.signal });
+        clearTimeout(abortTimer);
+      } catch (_) {
+        // best-effort: se /api/health non risponde in tempo si prosegue lo stesso
+      }
+
+      // minimo di permanenza per non far "sfarfallare" lo skeleton se
+      // backend e DB erano già caldi e hanno risposto in pochi ms
       const shownFor = Date.now() - startedAt;
       if (shownFor < 450) await new Promise(r => setTimeout(r, 450 - shownFor));
       overlay.classList.add('done');

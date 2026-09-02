@@ -1,0 +1,26 @@
+name: keep-alive
+
+# Tiene svegli backend (Render) e database (Neon): entrambi sono su free tier
+# e vanno in sleep dopo pochi minuti di inattività. Un ping periodico a
+# /api/health (che tocca il DB) evita che un recruiter che apre il link
+# aspetti 15-50s di cold start.
+#
+# NB: se cambia l'URL del servizio Render, aggiornarlo qui sotto.
+# NB: le GitHub Actions schedulate vengono disattivate dopo 60 giorni senza
+#     attività sul repo — basta un commit o un avvio manuale per riattivarle.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # ogni 10 minuti (UTC); i tempi effettivi possono slittare
+  workflow_dispatch: {}       # avvio manuale dalla tab Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/health
+        run: |
+          code=$(curl -sS -m 30 -o /dev/null -w '%{http_code}' \
+            https://rag-chatbot-0uwq.onrender.com/api/health)
+          echo "HTTP $code"
+          test "$code" = "200"

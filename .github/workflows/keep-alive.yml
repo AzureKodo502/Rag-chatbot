@@ -1,13 +1,15 @@
 name: keep-alive
 
-# Tiene svegli backend (Render) e database (Neon): entrambi sono su free tier
-# e vanno in sleep dopo pochi minuti di inattività. Un ping periodico a
-# /api/health (che tocca il DB) evita che un recruiter che apre il link
-# aspetti 15-50s di cold start.
+# Tiene sveglio SOLO il backend (Render), che va in sleep dopo 15 min di
+# inattività: un recruiter che apre il link non deve aspettare ~80s di cold
+# start. Si pinga /api/chat/status, che NON tocca il DB: così Neon resta
+# libero di auto-sospendersi (il suo free tier ha poche compute-hours) e si
+# risveglia da solo (~3s, dietro la schermata di caricamento) alla prima
+# visita reale.
 #
-# Keep-alive PRIMARIO: UptimeRobot (monitor HTTP su /api/health, ogni 5 min) —
-# più affidabile perché il cron di GitHub Actions slitta spesso. Questo
-# workflow è il BACKUP.
+# Keep-alive PRIMARIO: UptimeRobot (monitor HTTP su /api/chat/status, ogni
+# 5 min) — più affidabile perché il cron di GitHub Actions slitta spesso.
+# Questo workflow è il BACKUP.
 #
 # NB: se cambia l'URL del servizio Render, aggiornarlo qui sotto.
 # NB: le GitHub Actions schedulate vengono disattivate dopo 60 giorni senza
@@ -27,9 +29,9 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping /api/health
+      - name: Ping /api/chat/status
         run: |
-          URL="https://rag-chatbot-0uwq.onrender.com/api/health"
+          URL="https://rag-chatbot-0uwq.onrender.com/api/chat/status"
           # Se Render è freddo il primo ping fa da sveglia e può metterci
           # 30-90s: max-time generoso + qualche tentativo. Non fallire per una
           # singola risposta lenta — solo se resta irraggiungibile.

@@ -183,6 +183,12 @@ Il grosso del lavoro prima di mettere il link nel CV.
       `textContent` (mai `innerHTML`) — verificato con un payload
       `<script>` di prova: resta testo, nessuno script eseguito. i18n IT/EN.
       Verificato in locale e sul sito live.
+      — Aggiunta (2026-09-05): sezione **"Domande più frequenti"**. Nuova
+      tabella `question_log` (`V3`, niente IP/sessione), ogni domanda valida
+      a `/api/chat` viene loggata (logging non bloccante: se fallisce non
+      rompe mai la risposta), `GET /api/admin/questions` aggrega per testo
+      esatto. Anche il **login dev mode** rifatto: da `window.prompt` a un
+      modale con campo password mascherato + occhiello mostra/nascondi.
 - [x] **Posizione del pulsante "Genera Riassunto"** — FATTO (2026-09-02).
       Box dedicato `.summary-cta` con etichetta "Hai poco tempo?" + prefisso
       "▸", staccato dalle chip, full-width su mobile.

@@ -175,10 +175,14 @@ Il grosso del lavoro prima di mettere il link nel CV.
         chiama `wakeBackend()` a fine cold-start per svegliare Neon durante la
         schermata di caricamento, non alla prima domanda. NON usarlo come
         target dei ping periodici (terrebbe Neon sveglio 24/7).
-- [ ] **Pannello "Analytics" in-app (modalità sviluppatore)** — sezione nel
-      sito, visibile solo con dev mode attiva, che legge
-      `GET /api/admin/feedback` e mostra media stelle, distribuzione e
-      commenti recenti, senza aprire l'endpoint JSON a mano
+- [x] **Pannello "Analytics" in-app (modalità sviluppatore)** — FATTO
+      (2026-09-04). Link "📊 analytics" nella barra, visibile solo con dev
+      mode attiva (nascosto anche su mobile). Legge `GET /api/admin/feedback`
+      e mostra media/conteggio voti, distribuzione 1-5★ a barre, elenco degli
+      ultimi feedback (stelle, lingua, data, commento). Commenti resi via
+      `textContent` (mai `innerHTML`) — verificato con un payload
+      `<script>` di prova: resta testo, nessuno script eseguito. i18n IT/EN.
+      Verificato in locale e sul sito live.
 - [x] **Posizione del pulsante "Genera Riassunto"** — FATTO (2026-09-02).
       Box dedicato `.summary-cta` con etichetta "Hai poco tempo?" + prefisso
       "▸", staccato dalle chip, full-width su mobile.

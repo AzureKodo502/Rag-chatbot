@@ -76,6 +76,98 @@
     font-weight: 600;
   }
 
+  .analytics-link {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    padding: 0;
+  }
+  .analytics-link:hover { color: var(--accent); }
+
+  /* --- Pannello Analytics: solo dev mode, legge GET /api/admin/feedback --- */
+  .analytics-panel {
+    position: fixed;
+    top: 64px;
+    right: 20px;
+    z-index: 50;
+    width: min(440px, calc(100vw - 40px));
+    max-height: 75vh;
+    overflow-y: auto;
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .analytics-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .analytics-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold);
+  }
+  .analytics-close {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--ink-soft);
+    padding: 2px 4px;
+  }
+  .analytics-close:hover { color: var(--warn); }
+
+  .analytics-summary {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .analytics-dist { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
+  .analytics-dist-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .analytics-dist-star { width: 26px; flex-shrink: 0; }
+  .analytics-dist-bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .analytics-dist-bar-fill { display: block; height: 100%; background: var(--gold); }
+  .analytics-dist-count { width: 22px; text-align: right; flex-shrink: 0; }
+
+  .analytics-items { display: flex; flex-direction: column; gap: 10px; }
+  .analytics-item { border-left: 2px solid var(--rule); padding-left: 10px; }
+  .analytics-item-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold);
+    margin-bottom: 2px;
+  }
+  .analytics-item-comment { font-size: 13px; color: var(--ink); line-height: 1.4; }
+  .analytics-item-comment.empty { color: var(--ink-soft); font-style: italic; }
+  .analytics-empty, .analytics-error {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .analytics-empty { color: var(--ink-soft); }
+  .analytics-error { color: var(--warn); }
+
   /* --- Selettore lingua: segmented control a pillola (stile iOS), adattato
          alla palette. Cambia solo i testi della UI: la lingua della risposta
          dell'LLM continua a seguire quella della domanda. --- */
@@ -559,7 +651,11 @@
     .bar .name { font-size: 12.5px; }
     /* ispezione query e modalità sviluppatore sono feature "da desktop":
        su mobile la barra resta pulita (nome + toggle lingua) */
-    .debug-toggle, .admin-link, .admin-badge { display: none; }
+    /* !important: admin-badge/analytics-link vengono mostrati via style.display
+       inline da JS quando la dev mode è attiva; senza !important questa regola
+       non li batterebbe */
+    .debug-toggle, .admin-link, .admin-badge, .analytics-link { display: none !important; }
+    .analytics-panel { top: 56px; right: 8px; left: 8px; width: auto; }
 
     main { padding: 24px 16px 150px; }
     .intro { margin-bottom: 24px; }
@@ -619,7 +715,16 @@
     </label>
     <button class="admin-link" id="admin-link" type="button">modalità sviluppatore</button>
     <span class="admin-badge" id="admin-badge" style="display:none;">🔓 dev mode attiva</span>
+    <button class="analytics-link" id="analytics-link" type="button" style="display:none;">📊 analytics</button>
   </div>
+</div>
+
+<div class="analytics-panel" id="analytics-panel" hidden>
+  <div class="analytics-head">
+    <span class="analytics-title" id="analytics-title">Analytics feedback</span>
+    <button class="analytics-close" id="analytics-close" type="button" aria-label="Chiudi">✕</button>
+  </div>
+  <div class="analytics-body" id="analytics-body"></div>
 </div>
 
 <main>
@@ -720,6 +825,10 @@
   const chips = document.querySelectorAll('.chip');
   const adminLink = document.getElementById('admin-link');
   const adminBadge = document.getElementById('admin-badge');
+  const analyticsLink = document.getElementById('analytics-link');
+  const analyticsPanel = document.getElementById('analytics-panel');
+  const analyticsClose = document.getElementById('analytics-close');
+  const analyticsBody = document.getElementById('analytics-body');
   const langToggle = document.getElementById('lang-toggle');
   const summaryBtn = document.getElementById('summary-btn');
 
@@ -736,6 +845,14 @@
       debugToggle: 'ispeziona query vettoriale',
       adminLink: 'modalità sviluppatore',
       adminBadge: '🔓 dev mode attiva',
+      analyticsLink: '📊 analytics',
+      analyticsTitle: 'Analytics feedback',
+      analyticsClose: 'Chiudi',
+      analyticsLoading: 'Caricamento…',
+      analyticsSummary: (count, avg) => count + (count === 1 ? ' voto' : ' voti') + ' · media ' + avg + '/5',
+      analyticsEmpty: 'Nessun feedback ancora.',
+      analyticsNoComment: '— nessun commento —',
+      analyticsError: 'Errore nel caricare i dati.',
       eyebrow: 'Progetto 3 — RAG',
       h1: 'Fammi domande sul mio percorso, sui miei progetti e sullo stack che uso.',
       introP: 'Le risposte sono generate recuperando informazioni reali dal mio CV e dai README dei progetti (Retrieval-Augmented Generation) — non sono a caso.',
@@ -809,6 +926,14 @@
       debugToggle: 'inspect vector query',
       adminLink: 'developer mode',
       adminBadge: '🔓 dev mode on',
+      analyticsLink: '📊 analytics',
+      analyticsTitle: 'Feedback analytics',
+      analyticsClose: 'Close',
+      analyticsLoading: 'Loading…',
+      analyticsSummary: (count, avg) => count + (count === 1 ? ' vote' : ' votes') + ' · avg ' + avg + '/5',
+      analyticsEmpty: 'No feedback yet.',
+      analyticsNoComment: '— no comment —',
+      analyticsError: "Couldn't load the data.",
       eyebrow: 'Project 3 — RAG',
       h1: 'Ask me about my background, my projects and the stack I work with.',
       introP: 'Answers are generated by retrieving real information from my CV and the project READMEs (Retrieval-Augmented Generation) — they are not made up.',
@@ -893,6 +1018,9 @@
     document.querySelector('.debug-toggle span').textContent = t.debugToggle;
     adminLink.textContent = t.adminLink;
     adminBadge.textContent = t.adminBadge;
+    analyticsLink.textContent = t.analyticsLink;
+    document.getElementById('analytics-title').textContent = t.analyticsTitle;
+    document.getElementById('analytics-close').setAttribute('aria-label', t.analyticsClose);
     document.querySelector('.intro .eyebrow').textContent = t.eyebrow;
     document.querySelector('.intro h1').textContent = t.h1;
     document.querySelector('.intro p').textContent = t.introP;
@@ -1075,6 +1203,7 @@
     if (isAdmin) {
       adminBadge.style.display = 'inline';
       adminLink.style.display = 'none';
+      analyticsLink.style.display = 'inline';
     }
 
     refreshLockAndCountdown();
@@ -1538,6 +1667,109 @@
       console.error('Generazione riassunto fallita:', err);
     }
   });
+
+  // --- Pannello Analytics (solo dev mode) ----------------------------------
+  // Legge GET /api/admin/feedback (già protetto lato server dal token
+  // rag_admin_token) e mostra media, distribuzione voti e ultimi commenti,
+  // senza dover aprire l'endpoint JSON a mano.
+  const API_ADMIN_FEEDBACK_URL = API_BASE + "/api/admin/feedback";
+
+  function renderAnalytics(data) {
+    analyticsBody.innerHTML = '';
+    const s = data.summary || { count: 0, average: 0, distribution: {} };
+
+    const summaryEl = document.createElement('div');
+    summaryEl.className = 'analytics-summary';
+    const avg = Number(s.average || 0).toFixed(2);
+    summaryEl.textContent = t.analyticsSummary(s.count || 0, avg);
+    analyticsBody.appendChild(summaryEl);
+
+    const counts = [1, 2, 3, 4, 5].map(n => Number(s.distribution?.[n] ?? s.distribution?.[String(n)] ?? 0));
+    const maxCount = Math.max(1, ...counts);
+    const distEl = document.createElement('div');
+    distEl.className = 'analytics-dist';
+    for (let star = 5; star >= 1; star--) {
+      const count = counts[star - 1];
+      const row = document.createElement('div');
+      row.className = 'analytics-dist-row';
+      const label = document.createElement('span');
+      label.className = 'analytics-dist-star';
+      label.textContent = star + '★';
+      const track = document.createElement('span');
+      track.className = 'analytics-dist-bar-track';
+      const fill = document.createElement('span');
+      fill.className = 'analytics-dist-bar-fill';
+      fill.style.width = Math.round((count / maxCount) * 100) + '%';
+      track.appendChild(fill);
+      const countEl = document.createElement('span');
+      countEl.className = 'analytics-dist-count';
+      countEl.textContent = String(count);
+      row.appendChild(label);
+      row.appendChild(track);
+      row.appendChild(countEl);
+      distEl.appendChild(row);
+    }
+    analyticsBody.appendChild(distEl);
+
+    const items = data.items || [];
+    if (items.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'analytics-empty';
+      empty.textContent = t.analyticsEmpty;
+      analyticsBody.appendChild(empty);
+      return;
+    }
+
+    const itemsEl = document.createElement('div');
+    itemsEl.className = 'analytics-items';
+    items.forEach(item => {
+      const wrap = document.createElement('div');
+      wrap.className = 'analytics-item';
+
+      const meta = document.createElement('div');
+      meta.className = 'analytics-item-meta';
+      const stars = '★'.repeat(item.rating) + '☆'.repeat(5 - item.rating);
+      const when = item.createdAt ? item.createdAt.replace('T', ' ').slice(0, 16) : '';
+      const lang = item.lang ? item.lang.toUpperCase() : '—';
+      meta.textContent = [stars, lang, when].filter(Boolean).join(' · ');
+
+      const comment = document.createElement('div');
+      comment.className = 'analytics-item-comment' + (item.comment ? '' : ' empty');
+      comment.textContent = item.comment || t.analyticsNoComment; // textContent: mai innerHTML su testo di un visitatore
+
+      wrap.appendChild(meta);
+      wrap.appendChild(comment);
+      itemsEl.appendChild(wrap);
+    });
+    analyticsBody.appendChild(itemsEl);
+  }
+
+  async function loadAnalytics() {
+    analyticsBody.innerHTML = '';
+    const loading = document.createElement('div');
+    loading.className = 'analytics-empty';
+    loading.textContent = t.analyticsLoading;
+    analyticsBody.appendChild(loading);
+    try {
+      const res = await fetch(API_ADMIN_FEEDBACK_URL, { credentials: 'include' });
+      if (!res.ok) throw new Error('http ' + res.status);
+      renderAnalytics(await res.json());
+    } catch (err) {
+      analyticsBody.innerHTML = '';
+      const errEl = document.createElement('div');
+      errEl.className = 'analytics-error';
+      errEl.textContent = t.analyticsError;
+      analyticsBody.appendChild(errEl);
+      console.error('Caricamento analytics fallito:', err);
+    }
+  }
+
+  analyticsLink.addEventListener('click', () => {
+    const opening = analyticsPanel.hidden;
+    analyticsPanel.hidden = !opening;
+    if (opening) loadAnalytics();
+  });
+  analyticsClose.addEventListener('click', () => { analyticsPanel.hidden = true; });
 
   updateCharCounter();
   wakeBackend();

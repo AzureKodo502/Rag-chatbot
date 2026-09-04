@@ -207,6 +207,77 @@ Da un dispositivo che non è il tuo, senza VPN: cold start, 5-6 domande
   modello di generazione, il `top-k`, e i tempi di retrieval/generazione
   in millisecondi (`debug` nella risposta JSON).
 
+## Decisioni di design
+
+Alcune scelte che ho fatto di proposito, col motivo dietro — comprese le cose
+che ho deciso di **non** costruire.
+
+- **RAG, non fine-tuning.** Non ho riaddestrato nessun modello: le risposte
+  vengono da retrieval + un prompt, non da pesi modificati. Per un caso come
+  questo, dove i contenuti cambiano (aggiorno un file, re-ingest, fine), è la
+  scelta giusta: costa meno, aggiorno la knowledge base in 10 minuti e posso
+  citare la fonte esatta di ogni risposta. Il fine-tuning avrebbe senso se
+  dovessi cambiare lo *stile* del modello, non le *informazioni* che ha.
+- **pgvector su Postgres, non un vector DB dedicato.** Ho scartato apposta
+  Pinecone/Weaviate/Qdrant: con poche centinaia di chunk avrei aggiunto un
+  servizio, un account e una fattura in più per un problema che Postgres con
+  un'estensione risolve benissimo. Se la knowledge base crescesse di ordini
+  di grandezza rivaluterei — oggi sarebbe complessità comprata in anticipo
+  per un problema che non ho.
+- **Niente indice ANN sulla tabella dei chunk.** Storia vera: all'inizio
+  avevo l'indice `ivfflat` (quello "giusto" per pgvector) e il retrieval
+  restituiva sistematicamente zero risultati anche con dati validi. Un
+  indice approssimato, tarato per dataset grandi, su una tabella di 15-30
+  righe fa ricerche imprecise che a volte non trovano niente. L'ho tolto:
+  con questi volumi una scansione sequenziale è istantanea *ed esatta*. Non
+  l'ho letto su un blog, l'ho scoperto debuggando un bug vero.
+- **Ogni chunk deve reggersi da solo.** Il retrieval recupera un pezzo di
+  testo isolato dal resto del documento: se scrivo "Progetto 1" senza il
+  nome per esteso, il modello riceve quel pezzo e non sa cosa significhi.
+  Per questo ogni sezione della knowledge base ripete il nome completo del
+  progetto o dell'argomento, anche a costo di essere ridondante quando la
+  leggi tutta insieme.
+- **Rate limiting su due livelli, IP e sessione.** Da solo l'IP non basta
+  (una NAT aziendale o una VPN mette più persone dietro lo stesso
+  indirizzo), da sola la sessione nemmeno (un cookie si cancella). Li
+  combino: basta che uno dei due sfori per bloccare. Anche qui un bug vero
+  a monte: la prima versione aveva un off-by-one che bloccava la 3ª
+  richiesta legittima su un limite di 3 — trovato e corretto verificando a
+  mano il conteggio.
+- **Niente secondo LLM a fare da giudice sul prompt injection.** Avrei
+  potuto mandare ogni domanda a un modello "guardiano" prima di rispondere.
+  Raddoppia le chiamate e i costi per un rischio che qui è basso: il bot
+  parla solo del mio percorso pubblico, non ha accesso a dati sensibili né
+  esegue azioni. Rate limiting + regole nel system prompt + un pre-filtro
+  con pattern noti coprono la maggior parte dei tentativi a costo quasi
+  zero.
+- **La scheda "Genera Riassunto" è ibrida apposta.** Punti di forza e aree
+  di crescita li ho scritti io, a mano, e restano fissi: su un argomento
+  delicato come parlare di me stesso e dei miei limiti voglio controllare
+  esattamente cosa viene detto, non sperare che il modello lo dica bene.
+  Formazione, progetti e stack invece li genera l'LLM dalla knowledge base,
+  perché sono fatti oggettivi dove la generazione automatica non rischia di
+  scrivere qualcosa di storto — e intanto la scheda mostra una vera
+  capacità di sintesi del sistema, non solo domanda-risposta.
+- **Free tier ovunque, gestendo i cold start invece di pagarli via.**
+  Database e backend sono su piani gratuiti che si addormentano dopo pochi
+  minuti di inattività. Avrei potuto pagare per tenerli sempre accesi; ho
+  preferito risolverlo con una schermata di caricamento onesta (più un ping
+  periodico che li tiene svegli il più possibile) invece di spendere per un
+  problema che con un po' di UX si gestisce gratis. Se questo progetto
+  dovesse reggere traffico vero, la prima cosa che cambierei è proprio
+  questa.
+- **Niente framework frontend.** HTML/CSS/JS puri, zero build step, zero
+  `node_modules`. Per una pagina con questa complessità (una chat, un paio
+  di pannelli, pochi stati) un framework avrebbe aggiunto peso senza
+  aggiungere niente che non sapessi già fare a mano.
+- **Analytics senza tracciare le persone.** Salvo il voto del feedback, il
+  testo del commento, le domande fatte — mai un IP, mai un cookie di
+  sessione, mai niente che colleghi due azioni alla stessa persona. Non è
+  timidezza: un chatbot legato a un CV riceve poche decine di visite, non
+  mi serve un profilo per visitatore, e tracciarle comunque solleverebbe
+  questioni di privacy vere per un beneficio che non esiste.
+
 ## Possibili estensioni future
 
 - Hybrid search (full-text + vettoriale) per i nomi esatti di

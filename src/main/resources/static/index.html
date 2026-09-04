@@ -1209,17 +1209,6 @@
     refreshLockAndCountdown();
   }
 
-  // --- Controllo preliminare all'apertura della pagina: se sei già bloccato
-  //     (es. dopo un reload), lo mostriamo subito senza dover inviare nulla ---
-  async function checkStatusOnLoad() {
-    try {
-      const res = await fetch(API_STATUS_URL, { method: 'GET', credentials: 'include' });
-      applyHeaders(res.headers);
-    } catch (err) {
-      console.error('Impossibile controllare lo stato del rate limit:', err);
-    }
-  }
-
   // --- Cold start: su hosting free tier il backend si addormenta dopo
   //     qualche minuto di inattività e la prima richiesta può metterci
   //     30-60s a svegliarlo. Invece di mostrare una pagina "rotta",
@@ -1304,8 +1293,12 @@
         body: JSON.stringify({ password })
       });
       if (res.ok) {
-        await checkStatusOnLoad();
+        // Ricarico invece di aggiornare il DOM "a mano": così badge e link
+        // analytics compaiono in modo affidabile anche se un singolo fetch
+        // di stato fallisse per un blip di rete (successo al login ma UI
+        // rimasta indietro).
         alert(t.adminOk);
+        location.reload();
       } else {
         alert(t.adminBad);
       }

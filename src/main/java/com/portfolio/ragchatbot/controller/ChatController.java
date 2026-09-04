@@ -8,6 +8,8 @@ import com.portfolio.ragchatbot.service.PromptGuardService;
 import com.portfolio.ragchatbot.service.RateLimitService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,7 @@ import java.util.UUID;
 @RequestMapping("/api/chat")
 public class ChatController {
 
+    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
     private static final String SESSION_COOKIE_NAME = "rag_session_id";
 
     private final ChatService chatService;
@@ -82,7 +85,13 @@ public class ChatController {
         String lang = "en".equalsIgnoreCase(request.lang()) ? "en"
                 : "it".equalsIgnoreCase(request.lang()) ? "it"
                 : null;
-        questionLogRepository.log(message, lang);
+        // Il log è solo per l'Analytics: se fallisce (es. migrazione non ancora
+        // applicata, DB momentaneamente giù) non deve mai far fallire la risposta.
+        try {
+            questionLogRepository.log(message, lang);
+        } catch (Exception e) {
+            log.warn("Log della domanda fallito (non bloccante): {}", e.getMessage());
+        }
 
         ResponseEntity.BodyBuilder responseBuilder = isAdmin
                 ? withAdminHeaders(ResponseEntity.ok())

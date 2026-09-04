@@ -168,6 +168,119 @@
   .analytics-empty { color: var(--ink-soft); }
   .analytics-error { color: var(--warn); }
 
+  .analytics-section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    margin: 16px 0 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--rule);
+  }
+  .analytics-question {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    font-size: 13px;
+    margin-bottom: 6px;
+    line-height: 1.35;
+  }
+  .analytics-question-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold);
+    flex-shrink: 0;
+    min-width: 26px;
+  }
+  .analytics-question-text { color: var(--ink); }
+
+  /* --- Modale login modalità sviluppatore (sostituisce window.prompt: così
+         la password si può mascherare/rivelare) --- */
+  .admin-login-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(27, 27, 22, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  /* .display:flex esplicito qui sopra vincerebbe sulla regola nativa che
+     nasconde [hidden]: la ripristiniamo esplicitamente. */
+  .admin-login-overlay[hidden] { display: none; }
+  .admin-login-box {
+    width: 100%;
+    max-width: 340px;
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 8px;
+    padding: 18px 20px;
+  }
+  .admin-login-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .admin-login-title { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--ink); }
+  .admin-login-close {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--ink-soft);
+    padding: 2px 4px;
+  }
+  .admin-login-close:hover { color: var(--warn); }
+
+  .admin-login-field {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .admin-login-field input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 9px 12px;
+    font: inherit;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .admin-login-toggle {
+    border: none;
+    border-left: 1px solid var(--rule);
+    background: transparent;
+    cursor: pointer;
+    padding: 0 12px;
+    font-size: 15px;
+    color: var(--ink-soft);
+  }
+  .admin-login-toggle:hover { color: var(--accent); }
+
+  .admin-login-actions { margin-top: 12px; display: flex; justify-content: flex-end; }
+  .admin-login-submit {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+  }
+  .admin-login-submit:hover { background: var(--accent); }
+  .admin-login-submit:disabled { opacity: 0.4; cursor: default; }
+
+  .admin-login-error { margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--warn); }
+
   /* --- Selettore lingua: segmented control a pillola (stile iOS), adattato
          alla palette. Cambia solo i testi della UI: la lingua della risposta
          dell'LLM continua a seguire quella della domanda. --- */
@@ -727,6 +840,23 @@
   <div class="analytics-body" id="analytics-body"></div>
 </div>
 
+<div class="admin-login-overlay" id="admin-login-overlay" hidden>
+  <div class="admin-login-box">
+    <div class="admin-login-head">
+      <span class="admin-login-title" id="admin-login-title">Modalità sviluppatore</span>
+      <button class="admin-login-close" id="admin-login-close" type="button" aria-label="Chiudi">✕</button>
+    </div>
+    <div class="admin-login-field">
+      <input type="password" id="admin-login-password" placeholder="Password" autocomplete="current-password">
+      <button type="button" class="admin-login-toggle" id="admin-login-toggle" aria-label="Mostra password">👁</button>
+    </div>
+    <div class="admin-login-actions">
+      <button type="button" class="admin-login-submit" id="admin-login-submit">Accedi</button>
+    </div>
+    <div class="admin-login-error" id="admin-login-error" hidden></div>
+  </div>
+</div>
+
 <main>
   <div class="intro">
     <div class="eyebrow">Progetto 3 — RAG</div>
@@ -853,6 +983,8 @@
       analyticsEmpty: 'Nessun feedback ancora.',
       analyticsNoComment: '— nessun commento —',
       analyticsError: 'Errore nel caricare i dati.',
+      analyticsTopQuestions: 'Domande più frequenti',
+      analyticsNoQuestions: 'Nessuna domanda ancora.',
       eyebrow: 'Progetto 3 — RAG',
       h1: 'Fammi domande sul mio percorso, sui miei progetti e sullo stack che uso.',
       introP: 'Le risposte sono generate recuperando informazioni reali dal mio CV e dai README dei progetti (Retrieval-Augmented Generation) — non sono a caso.',
@@ -887,7 +1019,12 @@
       ],
       coldStartFail: '⚠️ Non riesco a contattare il backend. Verifica che sia avviato e riprova.',
       retry: 'Riprova',
-      adminPrompt: 'Password modalità sviluppatore:',
+      adminLoginTitle: 'Modalità sviluppatore',
+      adminLoginPlaceholder: 'Password',
+      adminLoginSubmit: 'Accedi',
+      adminLoginClose: 'Chiudi',
+      adminLoginShow: 'Mostra password',
+      adminLoginHide: 'Nascondi password',
       adminOk: 'Modalità sviluppatore attiva per 12 ore.',
       adminBad: 'Password non valida.',
       adminErr: 'Errore nel contattare il backend.',
@@ -934,6 +1071,8 @@
       analyticsEmpty: 'No feedback yet.',
       analyticsNoComment: '— no comment —',
       analyticsError: "Couldn't load the data.",
+      analyticsTopQuestions: 'Most asked questions',
+      analyticsNoQuestions: 'No questions yet.',
       eyebrow: 'Project 3 — RAG',
       h1: 'Ask me about my background, my projects and the stack I work with.',
       introP: 'Answers are generated by retrieving real information from my CV and the project READMEs (Retrieval-Augmented Generation) — they are not made up.',
@@ -968,7 +1107,12 @@
       ],
       coldStartFail: "⚠️ Can't reach the backend. Make sure it's running and try again.",
       retry: 'Retry',
-      adminPrompt: 'Developer mode password:',
+      adminLoginTitle: 'Developer mode',
+      adminLoginPlaceholder: 'Password',
+      adminLoginSubmit: 'Log in',
+      adminLoginClose: 'Close',
+      adminLoginShow: 'Show password',
+      adminLoginHide: 'Hide password',
       adminOk: 'Developer mode active for 12 hours.',
       adminBad: 'Invalid password.',
       adminErr: 'Error contacting the backend.',
@@ -1021,6 +1165,11 @@
     analyticsLink.textContent = t.analyticsLink;
     document.getElementById('analytics-title').textContent = t.analyticsTitle;
     document.getElementById('analytics-close').setAttribute('aria-label', t.analyticsClose);
+    document.getElementById('admin-login-title').textContent = t.adminLoginTitle;
+    document.getElementById('admin-login-password').placeholder = t.adminLoginPlaceholder;
+    document.getElementById('admin-login-submit').textContent = t.adminLoginSubmit;
+    document.getElementById('admin-login-close').setAttribute('aria-label', t.adminLoginClose);
+    document.getElementById('admin-login-toggle').setAttribute('aria-label', t.adminLoginShow);
     document.querySelector('.intro .eyebrow').textContent = t.eyebrow;
     document.querySelector('.intro h1').textContent = t.h1;
     document.querySelector('.intro p').textContent = t.introP;
@@ -1281,10 +1430,56 @@
     wakeBackend();
   });
 
-  // --- Modalità sviluppatore ---
-  adminLink.addEventListener('click', async () => {
-    const password = window.prompt(t.adminPrompt);
+  // --- Modalità sviluppatore: modale di login (non window.prompt, così la
+  //     password si può mascherare/rivelare con l'occhiello) ---
+  const adminLoginOverlay = document.getElementById('admin-login-overlay');
+  const adminLoginPassword = document.getElementById('admin-login-password');
+  const adminLoginToggle = document.getElementById('admin-login-toggle');
+  const adminLoginSubmit = document.getElementById('admin-login-submit');
+  const adminLoginClose = document.getElementById('admin-login-close');
+  const adminLoginError = document.getElementById('admin-login-error');
+
+  function openAdminLogin() {
+    adminLoginError.hidden = true;
+    adminLoginPassword.value = '';
+    adminLoginPassword.type = 'password';
+    adminLoginToggle.textContent = '👁';
+    adminLoginToggle.setAttribute('aria-label', t.adminLoginShow);
+    adminLoginSubmit.disabled = false;
+    adminLoginOverlay.hidden = false;
+    adminLoginPassword.focus();
+  }
+  function closeAdminLogin() {
+    adminLoginOverlay.hidden = true;
+  }
+
+  adminLink.addEventListener('click', openAdminLogin);
+  adminLoginClose.addEventListener('click', closeAdminLogin);
+  adminLoginOverlay.addEventListener('click', (e) => {
+    if (e.target === adminLoginOverlay) closeAdminLogin();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !adminLoginOverlay.hidden) closeAdminLogin();
+  });
+
+  adminLoginToggle.addEventListener('click', () => {
+    const reveal = adminLoginPassword.type === 'password';
+    adminLoginPassword.type = reveal ? 'text' : 'password';
+    adminLoginToggle.textContent = reveal ? '🙈' : '👁';
+    adminLoginToggle.setAttribute('aria-label', reveal ? t.adminLoginHide : t.adminLoginShow);
+    adminLoginPassword.focus();
+  });
+
+  adminLoginPassword.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitAdminLogin(); }
+  });
+  adminLoginSubmit.addEventListener('click', submitAdminLogin);
+
+  async function submitAdminLogin() {
+    const password = adminLoginPassword.value;
     if (!password) return;
+    adminLoginSubmit.disabled = true;
+    adminLoginError.hidden = true;
     try {
       const res = await fetch(API_ADMIN_LOGIN_URL, {
         method: 'POST',
@@ -1293,6 +1488,7 @@
         body: JSON.stringify({ password })
       });
       if (res.ok) {
+        closeAdminLogin();
         // Ricarico invece di aggiornare il DOM "a mano": così badge e link
         // analytics compaiono in modo affidabile anche se un singolo fetch
         // di stato fallisse per un blip di rete (successo al login ma UI
@@ -1300,13 +1496,17 @@
         alert(t.adminOk);
         location.reload();
       } else {
-        alert(t.adminBad);
+        adminLoginError.textContent = t.adminBad;
+        adminLoginError.hidden = false;
+        adminLoginSubmit.disabled = false;
       }
     } catch (err) {
-      alert(t.adminErr);
+      adminLoginError.textContent = t.adminErr;
+      adminLoginError.hidden = false;
+      adminLoginSubmit.disabled = false;
       console.error(err);
     }
-  });
+  }
 
   chips.forEach(chip => {
     chip.addEventListener('click', () => {
@@ -1409,7 +1609,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ message: question })
+        body: JSON.stringify({ message: question, lang: LANG })
       });
 
       applyHeaders(res.headers);
@@ -1662,13 +1862,14 @@
   });
 
   // --- Pannello Analytics (solo dev mode) ----------------------------------
-  // Legge GET /api/admin/feedback (già protetto lato server dal token
-  // rag_admin_token) e mostra media, distribuzione voti e ultimi commenti,
-  // senza dover aprire l'endpoint JSON a mano.
+  // Legge GET /api/admin/feedback e GET /api/admin/questions (protetti lato
+  // server dal token rag_admin_token) e mostra media/distribuzione voti,
+  // ultimi commenti e le domande più frequenti, senza aprire i due endpoint
+  // JSON a mano.
   const API_ADMIN_FEEDBACK_URL = API_BASE + "/api/admin/feedback";
+  const API_ADMIN_QUESTIONS_URL = API_BASE + "/api/admin/questions";
 
-  function renderAnalytics(data) {
-    analyticsBody.innerHTML = '';
+  function renderFeedbackSection(data) {
     const s = data.summary || { count: 0, average: 0, distribution: {} };
 
     const summaryEl = document.createElement('div');
@@ -1737,6 +1938,36 @@
     analyticsBody.appendChild(itemsEl);
   }
 
+  function renderQuestionsSection(data) {
+    const title = document.createElement('div');
+    title.className = 'analytics-section-title';
+    title.textContent = t.analyticsTopQuestions;
+    analyticsBody.appendChild(title);
+
+    const items = data.items || [];
+    if (items.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'analytics-empty';
+      empty.textContent = t.analyticsNoQuestions;
+      analyticsBody.appendChild(empty);
+      return;
+    }
+
+    items.forEach(q => {
+      const row = document.createElement('div');
+      row.className = 'analytics-question';
+      const count = document.createElement('span');
+      count.className = 'analytics-question-count';
+      count.textContent = q.count + '×';
+      const text = document.createElement('span');
+      text.className = 'analytics-question-text';
+      text.textContent = q.question; // textContent: mai innerHTML su testo di un visitatore
+      row.appendChild(count);
+      row.appendChild(text);
+      analyticsBody.appendChild(row);
+    });
+  }
+
   async function loadAnalytics() {
     analyticsBody.innerHTML = '';
     const loading = document.createElement('div');
@@ -1744,9 +1975,15 @@
     loading.textContent = t.analyticsLoading;
     analyticsBody.appendChild(loading);
     try {
-      const res = await fetch(API_ADMIN_FEEDBACK_URL, { credentials: 'include' });
-      if (!res.ok) throw new Error('http ' + res.status);
-      renderAnalytics(await res.json());
+      const [fbRes, qRes] = await Promise.all([
+        fetch(API_ADMIN_FEEDBACK_URL, { credentials: 'include' }),
+        fetch(API_ADMIN_QUESTIONS_URL, { credentials: 'include' })
+      ]);
+      if (!fbRes.ok || !qRes.ok) throw new Error('http ' + fbRes.status + '/' + qRes.status);
+      const [fbData, qData] = await Promise.all([fbRes.json(), qRes.json()]);
+      analyticsBody.innerHTML = '';
+      renderFeedbackSection(fbData);
+      renderQuestionsSection(qData);
     } catch (err) {
       analyticsBody.innerHTML = '';
       const errEl = document.createElement('div');

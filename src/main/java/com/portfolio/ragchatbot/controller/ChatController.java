@@ -1,5 +1,6 @@
 package com.portfolio.ragchatbot.controller;
 
+import com.portfolio.ragchatbot.repository.QuestionLogRepository;
 import com.portfolio.ragchatbot.service.AdminSessionService;
 import com.portfolio.ragchatbot.service.ChatAnswer;
 import com.portfolio.ragchatbot.service.ChatService;
@@ -25,16 +26,19 @@ public class ChatController {
     private final RateLimitService rateLimitService;
     private final PromptGuardService promptGuardService;
     private final AdminSessionService adminSessionService;
+    private final QuestionLogRepository questionLogRepository;
 
     @Value("${rag.input.max-length}")
     private int maxInputLength;
 
     public ChatController(ChatService chatService, RateLimitService rateLimitService,
-                          PromptGuardService promptGuardService, AdminSessionService adminSessionService) {
+                          PromptGuardService promptGuardService, AdminSessionService adminSessionService,
+                          QuestionLogRepository questionLogRepository) {
         this.chatService = chatService;
         this.rateLimitService = rateLimitService;
         this.promptGuardService = promptGuardService;
         this.adminSessionService = adminSessionService;
+        this.questionLogRepository = questionLogRepository;
     }
 
     @GetMapping("/status")
@@ -74,6 +78,11 @@ public class ChatController {
             return ResponseEntity.badRequest().body(new ErrorResponse(
                     "Il messaggio è troppo lungo (massimo " + maxInputLength + " caratteri)."));
         }
+
+        String lang = "en".equalsIgnoreCase(request.lang()) ? "en"
+                : "it".equalsIgnoreCase(request.lang()) ? "it"
+                : null;
+        questionLogRepository.log(message, lang);
 
         ResponseEntity.BodyBuilder responseBuilder = isAdmin
                 ? withAdminHeaders(ResponseEntity.ok())
@@ -115,7 +124,7 @@ public class ChatController {
         return newSessionId;
     }
 
-    public record ChatRequest(String message) {
+    public record ChatRequest(String message, String lang) {
     }
 
     public record ErrorResponse(String error) {

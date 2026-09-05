@@ -12,7 +12,7 @@ primo caricamento può metterci qualche secondo a svegliarsi.)
 
 ## Demo
 
-Una domanda con risposta e fonti citate, la scheda "Genera Riassunto", poi la
+Una domanda con risposta, la scheda "Genera Riassunto", poi la
 modalità sviluppatore con il pannello analytics (voti dei feedback e domande
 più frequenti).
 

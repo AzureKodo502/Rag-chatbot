@@ -9,11 +9,25 @@ summary.json
 target/
 *.class
 
-# Ambiente
+# Ambiente / segreti — non committare mai chiavi API o credenziali
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
 .idea/
 *.iml
+.vscode/
 .DS_Store
+Thumbs.db
+
+# Node (non usato in questo progetto, ma per sicurezza)
+node_modules/
+npm-debug.log*
+
+# Log
+*.log
 
 # Doc di lavoro interno, non per il repo pubblico
 HANDOFF.md

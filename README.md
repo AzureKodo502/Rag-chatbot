@@ -95,26 +95,44 @@ che ho deciso di **non** costruire.
 ```
 rag-portfolio-chatbot/
 ├── pom.xml
+├── Dockerfile                             -> build multi-stage per il deploy
+├── .github/workflows/keep-alive.yml       -> ping periodico di backup (Render + Neon)
+├── summary.json                           -> sezioni statiche "Genera Riassunto" (gitignorato)
 ├── src/main/java/com/portfolio/ragchatbot/
 │   ├── RagChatbotApplication.java
+│   ├── config/WebConfig.java              -> CORS (disattivo di default, stessa origine)
 │   ├── controller/
-│   │   ├── ChatController.java       -> POST /api/chat
-│   │   └── IngestionController.java  -> POST/DELETE /api/admin/ingest
+│   │   ├── ChatController.java            -> POST /api/chat, GET /api/chat/status
+│   │   ├── AdminController.java           -> POST /api/admin/login (modalità sviluppatore)
+│   │   ├── IngestionController.java       -> POST/DELETE /api/admin/ingest (protetto)
+│   │   ├── FeedbackController.java        -> POST /api/feedback, GET /api/admin/feedback
+│   │   ├── QuestionLogController.java     -> GET /api/admin/questions (domande più frequenti)
+│   │   ├── SummaryController.java         -> POST /api/summary, POST /api/admin/summary/refresh
+│   │   ├── HealthController.java          -> GET /api/health (keep-alive + sveglia Neon)
+│   │   └── HttpRequests.java              -> helper condivisi: cookie, IP del client
 │   ├── service/
-│   │   ├── EmbeddingService.java     -> chiama Voyage AI
-│   │   ├── AnthropicClient.java      -> chiama Claude
-│   │   ├── ChatService.java          -> orchestrazione RAG
-│   │   └── IngestionService.java     -> chunking + salvataggio
-│   ├── repository/VectorRepository.java -> query pgvector via JdbcTemplate
+│   │   ├── EmbeddingService.java          -> chiama Voyage AI
+│   │   ├── AnthropicClient.java           -> chiama Claude
+│   │   ├── ChatService.java               -> orchestrazione RAG + system prompt
+│   │   ├── IngestionService.java          -> chunking + salvataggio
+│   │   ├── FeedbackService.java           -> validazione + anti-spam feedback
+│   │   ├── SummaryService.java            -> scheda "Genera Riassunto" (statico + LLM), cache
+│   │   ├── PromptGuardService.java        -> pre-filtro pattern di prompt injection
+│   │   ├── RateLimitService.java          -> rate limit a due livelli, IP + sessione
+│   │   └── AdminSessionService.java       -> token della modalità sviluppatore
+│   ├── repository/
+│   │   ├── VectorRepository.java          -> query pgvector via JdbcTemplate
+│   │   ├── FeedbackRepository.java
+│   │   └── QuestionLogRepository.java
 │   └── model/DocumentChunk.java
-├── src/main/resources/
-│   ├── application.yml
-│   ├── db/migration/V1__init.sql     -> schema + estensione pgvector
-│   ├── db/migration/V2__feedback.sql -> tabella feedback
-│   ├── knowledge-base/cv-sample.txt  -> SOSTITUISCI con i tuoi contenuti
-│   └── static/index.html             -> pagina chat, servita da Spring su /
-├── Dockerfile                        -> build multi-stage per il deploy
-└── summary.json                      -> sezioni statiche "Genera Riassunto" (gitignorato)
+└── src/main/resources/
+    ├── application.yml
+    ├── db/migration/
+    │   ├── V1__init.sql                   -> schema + estensione pgvector
+    │   ├── V2__feedback.sql               -> tabella feedback
+    │   └── V3__question_log.sql           -> tabella question_log
+    ├── knowledge-base/cv-sample.txt       -> SOSTITUISCI con i tuoi contenuti
+    └── static/index.html                  -> pagina chat, servita da Spring su /
 ```
 
 ## Guida Setup Locale

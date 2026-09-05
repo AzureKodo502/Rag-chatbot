@@ -31,3 +31,6 @@ npm-debug.log*
 
 # Doc di lavoro interno, non per il repo pubblico
 HANDOFF.md
+
+# Config locale dello strumento AI usato per sviluppare (Claude Code)
+.claude/

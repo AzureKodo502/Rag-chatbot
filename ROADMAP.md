@@ -161,8 +161,12 @@ Il grosso del lavoro prima di mettere il link nel CV.
 - [ ] Repo GitHub da privato a **pubblico** — prima: audit dei doc
       (`HANDOFF.md` è un doc di lavoro interno, valutare se tenerlo fuori),
       README presentabile
-- [ ] Sezione "Decisioni di design" nel README — dimostra giudizio
-      ingegneristico, non solo capacità di scrivere codice
+- [x] Sezione "Decisioni di design" nel README — FATTO (2026-09-05). Dieci
+      scelte reali con il motivo dietro (RAG vs fine-tuning, pgvector vs
+      vector DB dedicato, niente indice ANN — con la storia del bug vero —
+      ecc.), in prima persona. Spostata subito dopo "Stack". Aggiunto anche
+      il link live in cima e aggiornata la struttura del progetto (era ferma
+      a Fase 1).
 - [ ] GIF o breve video demo nel README
 - [x] **Keep-alive** — FATTO (2026-09-02).
       - Ping periodico su `/api/chat/status` (NON tocca il DB): tiene sveglio

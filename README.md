@@ -16,9 +16,11 @@ Una domanda con risposta e fonti citate, la scheda "Genera Riassunto", poi la
 modalità sviluppatore con il pannello analytics (voti dei feedback e domande
 più frequenti).
 
-<!-- Video: apri questo README nell'editor web di GitHub e trascina qui il file
-     demo.mp4 (sul Desktop). GitHub lo carica su user-attachments e inserisce
-     un URL che si riproduce inline. Poi: git pull in locale. -->
+
+
+https://github.com/user-attachments/assets/17589a5f-299f-4992-8d06-438226bc71ea
+
+
 
 ## Stack
 

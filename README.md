@@ -314,7 +314,7 @@ Ai fini di miglioramento e monitoraggio delle prestazioni il sistema salva
 
 - il **testo delle domande** poste al chatbot, per capire cosa viene chiesto
   più spesso — senza niente che le colleghi a chi le ha scritte;
-- la **valutazione** del feedback (pollice su / giù) e l'eventuale **testo del
+- la **valutazione** del feedback e l'eventuale **testo del
   commento**, che è facoltativo.
 
 Non viene salvato nient'altro: nessun indirizzo IP, nessun dato personale,

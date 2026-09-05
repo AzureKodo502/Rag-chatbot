@@ -10,6 +10,16 @@ generate a partire dai contenuti reali del mio CV/README, non inventate.
 scaricare o configurare nulla. (Free tier: se non viene usato da un po' il
 primo caricamento può metterci qualche secondo a svegliarsi.)
 
+## Demo
+
+Una domanda con risposta e fonti citate, la scheda "Genera Riassunto", poi la
+modalità sviluppatore con il pannello analytics (voti dei feedback e domande
+più frequenti).
+
+<!-- Video: apri questo README nell'editor web di GitHub e trascina qui il file
+     demo.mp4 (sul Desktop). GitHub lo carica su user-attachments e inserisce
+     un URL che si riproduce inline. Poi: git pull in locale. -->
+
 ## Stack
 
 - **Backend**: Spring Boot 3 (Java 21), REST API
@@ -295,6 +305,27 @@ Da un dispositivo che non è il tuo, senza VPN: cold start, 5-6 domande
   combinato con rate limiting e limite di caratteri riduce drasticamente
   superficie e convenienza di un attacco.
 
+## Privacy e dati raccolti
+
+Ai fini di miglioramento e monitoraggio delle prestazioni il sistema salva
+**solo**:
+
+- il **testo delle domande** poste al chatbot, per capire cosa viene chiesto
+  più spesso — senza niente che le colleghi a chi le ha scritte;
+- la **valutazione** del feedback (pollice su / giù) e l'eventuale **testo del
+  commento**, che è facoltativo.
+
+Non viene salvato nient'altro: nessun indirizzo IP, nessun dato personale,
+nessun identificativo che permetta di ricondurre due azioni alla stessa
+persona. Le tabelle `question_log` e `feedback` non hanno nemmeno una colonna
+per l'IP o per la sessione.
+
+L'unico cookie è `rag_session_id`, un identificatore casuale usato
+**esclusivamente** per il rate limiting (evitare che la stessa sessione superi
+il limite di richieste): non contiene informazioni personali e non serve a
+tracciare la navigazione. Anche l'indirizzo IP viene usato solo per il rate
+limiting, in memoria e sul momento, e non viene mai scritto da nessuna parte.
+
 ## Feature di trasparenza (per chi guarda con occhio tecnico)
 
 - **Citazione delle fonti**: ogni risposta include l'elenco dei chunk
@@ -314,3 +345,15 @@ Da un dispositivo che non è il tuo, senza VPN: cold start, 5-6 domande
   risposta completa
 - Architettura configuration-driven: rendere identità, regole e contenuti
   configurazione esterna, così lo stesso codice serve chatbot diversi
+
+## Come è stato sviluppato
+
+Questo progetto è stato costruito in coppia con un agente di programmazione
+(Claude Code). Le decisioni di architettura (la separazione degli endpoint di
+keep-alive per non consumare le risorse gratuite del database, il
+privacy-by-design nei log, il rate limiting a due livelli), l'individuazione e
+la diagnosi dei bug — come quello dell'indice `ivfflat` che restituiva zero
+risultati, o l'off-by-one nel rate limiter — e la validazione di ogni scelta
+sono mie; l'IA ha accelerato la scrittura del codice e dei test. L'obiettivo
+era usare l'IA dove fa risparmiare tempo, sul codice ripetitivo e sul
+boilerplate, senza delegarle il ragionamento.

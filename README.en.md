@@ -351,6 +351,6 @@ architecture decisions (splitting the keep-alive endpoints so as not to burn
 the database's free resources, privacy-by-design in the logs, two-level rate
 limiting), spotting and diagnosing the bugs — like the `ivfflat` index
 returning zero results, or the off-by-one in the rate limiter — and
-validating every choice are mine; the AI sped up writing the code and the
-tests. The goal was to use AI where it saves time, on repetitive code and
-boilerplate, without delegating the reasoning to it.
+validating every choice are mine; the AI sped up writing the code. The goal
+was to use AI where it saves time, on repetitive code and boilerplate,
+without delegating the reasoning to it.

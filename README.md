@@ -358,6 +358,6 @@ keep-alive per non consumare le risorse gratuite del database, il
 privacy-by-design nei log, il rate limiting a due livelli), l'individuazione e
 la diagnosi dei bug — come quello dell'indice `ivfflat` che restituiva zero
 risultati, o l'off-by-one nel rate limiter — e la validazione di ogni scelta
-sono mie; l'IA ha accelerato la scrittura del codice e dei test. L'obiettivo
-era usare l'IA dove fa risparmiare tempo, sul codice ripetitivo e sul
-boilerplate, senza delegarle il ragionamento.
+sono mie; l'IA ha accelerato la scrittura del codice. L'obiettivo era usare
+l'IA dove fa risparmiare tempo, sul codice ripetitivo e sul boilerplate,
+senza delegarle il ragionamento.

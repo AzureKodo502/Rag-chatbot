@@ -1,5 +1,7 @@
 # RAG Portfolio Chatbot
 
+**EN** · [Read in English](README.en.md)
+
 Chatbot che risponde a domande sul mio percorso, i miei progetti e lo stack
 tecnico usato, basandosi su Retrieval-Augmented Generation: le risposte sono
 generate a partire dai contenuti reali del mio CV/README, non inventate.
